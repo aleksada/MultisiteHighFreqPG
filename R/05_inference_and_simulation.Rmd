@@ -1,0 +1,476 @@
+---
+title: "Inference and Simulation"
+author: "Yuxiao Li"
+date: "`r Sys.Date()`"
+output: 
+  github_document:
+    toc: true
+  html_document:
+    toc: true
+    number_sections: true
+    code_folding: hide
+---
+
+# Overview
+This file contains the code for inference and reproducing rainfall data. Most of results shown in the paper can be found here.
+
+In general, we want to
+
+* load the results from estimation
+* simulate one replicate of rainfall base on skew-t model and Gaussian model
+* visualize the simulations
+* simulate multiple replicates of rainfall base on skew-t model and Gaussian model
+* calculate the some important quantities related to rainfall
+* visualize the results
+
+# Librares and Data
+
+## Libraries
+```{r}
+library(here)
+library(geoR)
+library(sn)
+library(cowplot)
+```
+
+## load data
+```{r load estimate values}
+load(here("results", "estimation.cov.VAR1.RData"))
+load(here("results", "rain.long.RData"))
+raindata <- matrix(rain.long$rain[1:230400],28800,8)
+#raindata <- matrix(rain.1min.df$rain[1:115200],14400,8)
+NT <- nrow(raindata)
+NS <- ncol(raindata)
+sigma21.st <- results.VAR1$sigma21
+beta1.st <- results.VAR1$beta1
+dist <- matrix(data = 0, nrow = NS, ncol = NS) # The distances between locations
+for (i in 1:NS) {
+    for (j in 1:NS) {
+        dist[i,j] <- sqrt((coord[i,2]-coord[j,2])^2+(coord[i,3]-coord[j,3])^2)   
+    }
+}
+B1.st <-  sigma21.st * matern(dist,beta1.st,1)
+alpha <- results.VAR1$alpha
+b0.st <- results.VAR1$b0
+b1.st <- results.VAR1$b1
+ut <- results.VAR1$ut
+```
+
+```{r load estimate values norm}
+load(here("results", "estimation.cov.VAR1.norm.RData"))
+load(here("results", "rain.long.RData"))
+raindata <- matrix(rain.long$rain[1:230400],28800,8)
+#raindata <- matrix(rain.1min.df$rain[1:115200],14400,8)
+NT <- nrow(raindata)
+NS <- ncol(raindata)
+sigma21.norm <- results.VAR1.norm$sigma21
+beta1.norm <- results.VAR1.norm$beta1
+dist <- matrix(data = 0, nrow = NS, ncol = NS) # The distances between locations
+for (i in 1:NS) {
+    for (j in 1:NS) {
+        dist[i,j] <- sqrt((coord[i,2]-coord[j,2])^2+(coord[i,3]-coord[j,3])^2)   
+    }
+}
+B1.norm <-  sigma21.norm * matern(dist,beta1.norm,1)
+b0.norm <- results.VAR1.norm$b0
+b1.norm <- results.VAR1.norm$b1
+```
+
+
+#Simulate one replicate
+
+##Simulate one replicate from skew-t model
+```{r simulate 1 error st}
+error.st <- matrix(0,NT,NS)
+set.seed(4)
+for(s in 1 :NS){
+    nu <- 4
+    bvdelta <- sqrt(nu) * gamma(1/2 * (nu - 1))/sqrt(pi)/gamma(1/2 * nu) * 
+        alpha/sqrt(1 + alpha^2)
+    omega <- 1/sqrt((nu/(nu-2) - bvdelta^2))
+    xi<- -omega * bvdelta
+    error.st[,s] <- rst(NT, xi = xi, omega = omega, alpha, nu)
+}
+```
+
+```{r simulate 1 rainfall st}
+y.st <- matrix(0,NT,NS)
+for(t in 2: NT){
+    y.st[t,] <- B1.st %*% raindata[t - 1,] + error.st[t,] * (b0.st + b1.st * mean(raindata[t - 1,]))
+    y.st[t,] <- ifelse(y.st[t,] > ut[t,], y.st[t,], 0)
+}
+```
+
+##Simulate one replicate from Gaussian model
+
+```{r simulate 1 error norm}
+error.norm <- matrix(0,NT,NS)
+set.seed(4)
+for(s in 1 :NS) error.norm[,s] <- rnorm(NT)
+```
+
+```{r simulate 1 rainfall norm}
+y.norm <- matrix(0,NT,NS)
+for(t in 2: NT){
+    y.norm[t,] <- B1.norm %*% raindata[t - 1,] + 
+        error.norm[t,] * (b0.norm + b1.norm * mean(raindata[t-1,]))
+    y.norm[t,] <- ifelse(y.norm[t,] > ut[t,], y.norm[t,], 0)
+}
+```
+
+#Visualize the replicate
+
+##Skew t
+
+```{r qqplot Skew t}
+par(mfrow=c(3,3))
+for (i in 1:8){
+    plot.ts(raindata[,i], 
+            ylim = c(0, 0.1 + max(c(raindata[,i],round(y.st[,i])))))
+    lines(y.st[,i],col='grey')
+}
+
+    qqplot(c(y.st), c(raindata))
+    abline(0,1)
+
+```
+
+##Gaussian
+```{r qqplot gaussian}
+par(mfrow=c(3,3))
+for (i in 1:8){
+    plot.ts(raindata[,i], 
+            ylim = c(0, 0.1 + max(c(raindata[,i],round(y.norm[,i])))))
+    lines(y.norm[,i],col='grey')
+}
+
+    qqplot(c(y.norm), c(raindata))
+    abline(0,1)
+
+```
+
+##ggplot
+```{r skew-t sims}
+rain.sims <- rain.long[-(1:8)*28801,]
+rain.sims$rain1 <- melt(y.st)$value
+rain.sim.plot<-ggplot(rain.sims,aes(x=dt,group=sites))+
+    geom_line(aes(y = rain,color='Observation'),alpha=0.6)+
+     geom_line(aes(y = rain1,color='Simulation'),alpha=0.6) + 
+        facet_grid(sites ~ .) + xlab("Data and Time") + ylab("Amount of Rain")+
+    ggtitle("(a) Simulation vs Observation" )
+
+rain.sim.plot
+```
+
+```{r Gaussian sims}
+rain.sims <- rain.long[-(1:8)*28801,]
+rain.sims$rain1 <- melt(y.norm)$value
+rain.sim.plot.norm<-ggplot(rain.sims,aes(x=dt,group=sites))+
+    geom_line(aes(y = rain,color='Observation'),alpha=0.6)+
+     geom_line(aes(y = rain1,color='Simulation'),alpha=0.6) + 
+        facet_grid(sites ~ .) + xlab("Data and Time") + ylab("Amount of Rain")+
+    ggtitle("(b) Simulation vs Observation--Guassian Error" )
+
+rain.sim.plot.norm
+```
+
+
+#Function to simulate multiple realizations
+
+##Skew t
+```{r multiple simulations}
+
+nsims.app <- function(NT,NS,sigma21,beta1,b0,b1,alpha,nu,niters,true){
+    error <- array(0,c(NT,NS,niters))
+    y <- array(0,c(NT,NS,niters))
+    dist <- matrix(data = 0, nrow = NS, ncol = NS) # The distances between locations
+    for (i in 1:NS) {
+        for (j in 1:NS) {
+            dist[i,j] <- sqrt((coord[i,2]-coord[j,2])^2+(coord[i,3]-coord[j,3])^2)   
+        }
+    }
+    B1 <-  sigma21 * matern(dist,beta1,1)
+    for(iter in 1: niters){
+        for(s in 1 :NS){
+            nu <- nu
+            bvdelta <- sqrt(nu) * gamma(1/2 * (nu - 1))/sqrt(pi)/gamma(1/2 * nu) * 
+            alpha/sqrt(1 + alpha^2)
+            omega <- 1/sqrt((nu/(nu-2) - bvdelta^2))
+            xi<- -omega * bvdelta
+            error[,s,iter] <- rst(NT, xi = xi, omega = omega, alpha, nu)
+        }
+
+        for(t in 2: NT){
+        y[t,,iter] <- B1 %*% true[t - 1,] + 
+                            error[t,,iter] * (b0 + b1 * mean(true[t - 1,]))
+        y[t,,iter] <- ifelse(y[t,,iter] > ut[t,], y[t,,iter], 0)
+        }
+    }
+    return(y)
+}
+```
+
+##Gaussian
+```{r multiple simulations norm}
+nsims.app.norm <- function(NT,NS,sigma21,beta1,b0,b1,niters,true){
+    error <- array(0,c(NT,NS,niters))
+    y <- array(0,c(NT,NS,niters))
+    dist <- matrix(data = 0, nrow = NS, ncol = NS) # The distances between locations
+    for (i in 1:NS) {
+        for (j in 1:NS) {
+            dist[i,j] <- sqrt((coord[i,2]-coord[j,2])^2+(coord[i,3]-coord[j,3])^2)   
+        }
+    }
+    B1 <-  sigma21 * matern(dist,beta1,1)
+    for(iter in 1: niters){
+        for(s in 1 :NS){
+            error[,s,iter] <- rnorm(NT)
+        }
+
+        for(t in 2: NT){
+        y[t,,iter] <- B1 %*% true[t - 1,] + 
+                            error[t,,iter] * (b0 + b1 * mean(true[t - 1,]))
+        y[t,,iter] <- ifelse(y[t,,iter] > ut[t,], y[t,,iter], 0)
+        }
+    }
+    return(y)
+}
+```
+
+##Simulation 50 replications
+```{r run functions}
+set.seed(4)
+niters<-50
+app.sim <- nsims.app(NT,NS,sigma21.st,beta1.st,b0.st,b1.st,
+                  alpha,4,niters,raindata)
+app.sim.norm<-nsims.app.norm(NT,NS,sigma21.norm,beta1.norm,b0.norm,b1.norm,
+                  niters,raindata)
+```
+
+#Calculate the some important quantities related to rainfall
+
+##MRMSE
+```{r}
+rmse.app<-rmse.app.norm<-c()
+for(i in 1:niters){
+  rmse.app[i]<-sqrt(mean((app.sim[,,i]-raindata)^2))
+  rmse.app.norm[i]<-sqrt(mean((app.sim.norm[,,i]-raindata)^2))
+}
+mrmse.app<-mean(rmse.app)*100
+mrmse.app.norm<-mean(rmse.app.norm)*100
+```
+
+##Quantile
+```{r}
+quan.app<-quan.app.norm<-matrix(0,niters,10000)
+for (j in 1 :niters){
+   quan.app[j,]<- quantile(app.sim[,,j],1:10000/10000) 
+   quan.app.norm[j,]<- quantile(app.sim.norm[,,j],1:10000/10000) 
+   quan.app.true<- quantile(raindata,1:10000/10000) 
+}
+quan.df.app<-data.frame(x=rep(quan.app.true,3),median=c(apply(quan.app,2,sort)[26,],apply(quan.app.norm,2,sort)[26,],quan.app.true),lower=c(apply(quan.app,2,sort)[2,],apply(quan.app.norm,2,sort)[2,],rep(NA,10000)),upper=c(apply(quan.app,2,sort)[49,],apply(quan.app.norm,2,sort)[49,],rep(NA,10000)),Type=c(rep("Skew-t",10000),rep("Gaussian",10000),rep("Truth",10000)))
+
+```
+
+##Simutaneous rain
+```{r}
+# Mode <- function(x, na.rm = FALSE) {
+#   if(na.rm){
+#     x = x[!is.na(x)]
+#   }
+# 
+#   ux <- unique(x)
+#   return(ux[which.max(tabulate(match(x, ux)))])
+# }
+simutan<-apply(y.st,1,function(x){sum(x>0)})
+#simutan.norm<-apply(y.norm,1,function(x){sum(x>0)})
+simutan.true<-apply(raindata,1,function(x){sum(x>0)})
+
+
+
+spat.dep <- melt(data.frame(Truth=simutan.true,"Skew-t" = simutan))
+```
+
+##Dry spell length
+```{r}
+cons<-rle(c(raindata))
+mattovec<-apply(app.sim,3,c)
+mattovec.norm<-apply(app.sim.norm,3,c)
+cons2<-apply(mattovec,2,rle)
+cons2.norm<-apply(mattovec.norm,2,rle)
+
+quan.cons<-quan.cons.norm<-matrix(0,niters,10000)
+for (j in 1 :niters){
+   quan.cons[j,]<- quantile(cons2[[j]]$length[cons2[[j]]$values==0],1:10000/10000,type = 6) 
+   #quan.cons.norm[j,]<-quantile(cons2.norm[[j]]$length[cons2.norm[[j]]$values==0],1:10000/10000,type = 6)
+   quan.cons.true<- quantile(cons$length[cons$values==0],1:10000/10000,type = 6) 
+}
+quan.cons<-data.frame(x=rep(quan.cons.true,2),median=c(apply(quan.cons,2,sort)[26,],quan.cons.true),lower=c(apply(quan.cons,2,sort)[2,],rep(NA,10000)),upper=c(apply(quan.cons,2,sort)[49,],rep(NA,10000)),Type=c(rep("Skew-t",10000),rep("Truth",10000)))
+
+```
+
+##Wet spell length
+
+```{r}
+w.cons<-rle(c(raindata>0))
+w.mattovec<-apply(app.sim>0,3,c)
+w.mattovec.norm<-apply(app.sim.norm>0,3,c)
+w.cons2<-apply(w.mattovec,2,rle)
+w.cons2.norm<-apply(w.mattovec.norm,2,rle)
+
+w.quan.cons<-w.quan.cons.norm<-matrix(0,niters,10000)
+for (j in 1 :niters){
+   w.quan.cons[j,]<- quantile(w.cons2[[j]]$length[w.cons2[[j]]$values==TRUE],1:10000/10000,type = 6) 
+   w.quan.cons.norm[j,]<-quantile(w.cons2.norm[[j]]$length[w.cons2.norm[[j]]$values==TRUE],1:10000/10000,type = 6)
+   w.quan.cons.true<- quantile(w.cons$length[w.cons$values==TRUE],1:10000/10000,type = 6) 
+}
+w.quan.cons<-data.frame(x=rep(w.quan.cons.true,2),median=c(apply(w.quan.cons,2,sort)[26,],w.quan.cons.true),lower=c(apply(w.quan.cons,2,sort)[2,],rep(NA,10000)),upper=c(apply(w.quan.cons,2,sort)[49,],rep(NA,10000)),Type=c(rep("Skew-t",10000),rep("Truth",10000)))
+
+```
+
+
+##Conditional probability
+```{r}
+condi.prob<-condi.prob.norm<-matrix(0,3,50)
+for(i in 1:50){
+condi.prob[,i]<-table((app.sim[-1,,i]>0)-(app.sim[-NT,,i]>0))/(NT*NS)
+#condi.prob.norm[,i]<-table((app.sim.norm[-1,,i]>0)-(app.sim.norm[-NT,,i]>0))/(NT*NS)
+}
+condi.prob.real<-table((raindata[-1,]>0)-(raindata[-NT,]>0))/(NT*NS)
+
+wcd<-apply(condi.prob,1,mean)[3]
+dcd<-1-apply(condi.prob,1,mean)[3]
+wcw<-1-apply(condi.prob,1,mean)[1]
+dcw<-apply(condi.prob,1,mean)[1]
+round(c(wcw,dcw,wcd,dcd),3)
+wcd.r<-apply(condi.prob.real,1,mean)[3]
+dcd.r<-1-apply(condi.prob.real,1,mean)[3]
+wcw.r<-1-apply(condi.prob.real,1,mean)[1]
+dcw.r<-apply(condi.prob.real,1,mean)[1]
+round(c(wcw.r,dcw.r,wcd.r,dcd.r),3)
+```
+
+#Visualization
+##QQplot
+
+```{r}
+p1 <- ggplot(data = quan.df.app, aes(x=x, y=median, colour=Type)) + 
+    geom_line(size=0.8) + ylab("Empirical Quantiles (count/epoch)") + xlab("Sample Quantiles (count/epoch)") +
+    ggtitle("The QQ-plot of two models: Obervation vs Simulation") +
+    scale_y_continuous()+scale_x_continuous()+
+    geom_ribbon(aes(ymin=lower, ymax=upper,fill=Type), linetype=2, alpha=0.3) + 
+    scale_color_brewer(palette = "Dark2") +    
+    scale_fill_brewer(palette = "Dark2")
+p1
+```
+
+##Simutaneous rain
+```{r}
+
+p2 <- ggplot(spat.dep,aes(group=variable,fill=variable)) +
+        geom_histogram(aes(value),binwidth=.5,position = position_dodge())+ 
+        xlab("Number of simutaneously rainy locations")+
+        ylab("Count")+
+        ggtitle("Histogram of Simutaneous Rain")
+p2
+
+```
+
+##Dry spell length
+```{r}
+p.cons <- ggplot(data = quan.cons, aes(x=x, y=median, colour=Type)) + 
+    geom_line(size=0.8) + ylab("Empirical Quantiles (count/epoch)") + xlab("Sample Quantiles (count/epoch)") +
+    ggtitle("The QQ-plot of the dry spell length") +
+    scale_y_continuous()+scale_x_continuous()+
+    geom_ribbon(aes(ymin=lower, ymax=upper,fill=Type), linetype=2, alpha=0.3) + 
+    scale_color_brewer(palette = "Dark2") +    
+    scale_fill_brewer(palette = "Dark2")
+p.cons
+
+```
+
+```{r}
+w.p.cons <- ggplot(data = w.quan.cons, aes(x=x, y=median, colour=Type)) + 
+    geom_line(size=0.8) + ylab("Empirical Quantiles (count/epoch)") + xlab("Sample Quantiles (count/epoch)") +
+    ggtitle("The QQ-plot of the wet spell length") +
+    scale_y_continuous()+scale_x_continuous()+
+    geom_ribbon(aes(ymin=lower, ymax=upper,fill=Type), linetype=2, alpha=0.3) + 
+    scale_color_brewer(palette = "Dark2") +    
+    scale_fill_brewer(palette = "Dark2")
+w.p.cons
+
+```
+
+## Distriburion table
+```{r distribution table}
+tab1<-table(raindata)
+tab2<-table(round(y.st))
+tab1
+tab2
+
+tab1<-table(raindata)
+tab2<-table(round(y.norm))
+tab1
+tab2
+```
+
+##Conditional probability
+
+```{r}
+par(mfrow=c(1,2))
+plot(density(condi.prob[3,]),main='Wet|Dry',xlab="Transition probability",xlim=c(0,0.5),lwd=2,col=2)
+lines(density(condi.prob.norm[3,]),col=3,lwd=2,lty=2)
+abline(v=condi.prob.real[3],col=1,lwd=2,lty=2)
+legend("topright",c("Truth","Skew-t","Gaussian"),col=c(1,2,3),lwd=2)
+
+plot(density(1-condi.prob[1,]),main='Wet|Wet',xlab="Transition probability",xlim=c(0.5,1),lwd=2,col=2)
+lines(density(1-condi.prob.norm[1,]),col=3,lwd=2,lty=2)
+abline(v=1-condi.prob.real[1],col=1,lwd=2,lty=2)
+legend("topleft",c("Truth","Skew-t","Gaussian"),col=c(1,2,3),lwd=2)
+```
+
+#Save the figures
+
+```{r}
+ggsave(filename=here("results","rainsim.pdf"),device='pdf', plot=rain.sim.plot,width = 8, height = 10)
+```
+
+```{r}
+ggsave(filename=here("results","rainsim.norm.pdf"),device='pdf', plot=rain.sim.plot.norm,width = 8, height = 10)
+```
+
+```{r save the figure}
+combine_plot<-plot_grid( rain.sim.plot, rain.sim.plot.norm, align='h',rel_widths = 1.2, rel_heights = 1)
+ggsave(filename=here("results","sim_compare.pdf"),device='pdf', plot=combine_plot, width = 12, height = 10)
+```
+
+```{r}
+ggsave(filename=here("results","qqapp.pdf"),device='pdf', plot=p1, width = 6, height = 5)
+```
+
+```{r}
+ggsave(filename=here("results","spatial.pdf"),device='pdf', plot=p2,width = 6, height = 5)
+```
+
+```{r}
+ggsave(filename=here("results","length.pdf"),device='pdf', plot=p.cons,width = 6, height = 5)
+```
+
+```{r}
+ggsave(filename=here("results","wetlength.pdf"),device='pdf', plot=w.p.cons,width = 6, height = 5)
+```
+
+```{r}
+pdf("condidry.pdf",width=10, height=5)
+par(mfrow=c(1,2))
+plot(density(condi.prob[3,]),main='Wet|Dry',xlab="Transition probability",xlim=c(0,0.5),lwd=2,col=2)
+lines(density(condi.prob.norm[3,]),col=3,lwd=2,lty=2)
+abline(v=condi.prob.real[3],col=1,lwd=2,lty=2)
+legend("topright",c("Truth","Skew-t","Gaussian"),lwd=2,col=c(1,2,3),lty=c(2,1,1))
+
+plot(density(1-condi.prob[1,]),main='Wet|Wet',xlab="Transition probability",xlim=c(0.5,1),lwd=2,col=2)
+lines(density(1-condi.prob.norm[1,]),col=3,lwd=2,lty=2)
+abline(v=1-condi.prob.real[1],col=1,lwd=2,lty=2)
+legend("topleft",c("Truth","Skew-t","Gaussian"),col=c(1,2,3),lwd=2,lty=c(2,1,1))
+dev.off()
+```

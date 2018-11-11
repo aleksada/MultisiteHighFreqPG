@@ -1,0 +1,4 @@
+"0","save(rain.long, file=here(""results"", ""rain.long.RData""))"
+"0","save(rain.1min.df, file=here(""results"", ""rain.1min.df.RData""))"
+"0","save(rain.15min.df, file=here(""results"", ""rain.15min.df.RData""))"
+"0","save(rain.hour.df, file=here(""results"", ""rain.hour.df.RData""))"

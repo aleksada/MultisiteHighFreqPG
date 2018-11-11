@@ -1,0 +1,2 @@
+"0","mat.est<-cbind(unlist(est1),unlist(est2),unlist(est3),unlist(est4),unlist(est5),unlist(est6))"
+"0","save(mat.est, file = here(""results"",""sim.est.RData""))"

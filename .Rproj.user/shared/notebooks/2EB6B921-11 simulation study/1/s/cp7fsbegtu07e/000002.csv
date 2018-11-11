@@ -1,0 +1,2 @@
+"0","y.sim <- sims(NT,NS,sigma21,beta1,b0,b1,alpha,nu)"
+"0","plot.ts(y.sim$y.sim)"

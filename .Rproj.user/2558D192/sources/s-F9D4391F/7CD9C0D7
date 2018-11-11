@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1537184083777.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "7CD9C0D7",
+    "lastKnownWriteTime" : 1540645908,
+    "last_content_update" : 1540645908557,
+    "path" : "~/Dropbox/My Research/rainfall paper/rainfall generator/R/03_preprocessing_data.Rmd",
+    "project_path" : "R/03_preprocessing_data.Rmd",
+    "properties" : {
+        "cursorPosition" : "59,79",
+        "scrollLine" : "0"
+    },
+    "relative_order" : 3,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}

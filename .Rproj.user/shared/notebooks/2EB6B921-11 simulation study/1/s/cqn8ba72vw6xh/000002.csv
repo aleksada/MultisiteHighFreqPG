@@ -1,0 +1,7 @@
+"0","y.sim.vis <- matrix(0,NT,6)"
+"0","y.sim.vis[,1] <- sims(NT,NS,sigma21,beta1,b0,b1,0,20)$y.sim[,1]"
+"0","y.sim.vis[,2] <- sims(NT,NS,sigma21,beta1,b0,b1,5,20)$y.sim[,1]"
+"0","y.sim.vis[,3] <- sims(NT,NS,sigma21,beta1,b0,b1,0,7)$y.sim[,1]"
+"0","y.sim.vis[,4] <- sims(NT,NS,sigma21,beta1,b0,b1,5,7)$y.sim[,1]"
+"0","y.sim.vis[,5] <- sims(NT,NS,sigma21,beta1,b0,b1,0,3)$y.sim[,1]"
+"0","y.sim.vis[,6] <- sims(NT,NS,sigma21,beta1,b0,b1,5,3)$y.sim[,1]"

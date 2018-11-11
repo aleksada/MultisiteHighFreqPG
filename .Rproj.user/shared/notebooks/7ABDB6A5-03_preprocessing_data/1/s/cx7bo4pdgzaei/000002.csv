@@ -1,0 +1,4 @@
+"0","minutemean <- rain.long[,2:5] %>% group_by(G=trunc(2:(n()+1)/2))"
+"2","Error in rain.long[, 2:5] %>% group_by(G = trunc(2:(n() + 1)/2)) : 
+  could not find function ""%>%""
+"

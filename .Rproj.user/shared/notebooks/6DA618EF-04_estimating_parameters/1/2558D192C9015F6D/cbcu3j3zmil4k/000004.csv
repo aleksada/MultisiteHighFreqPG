@@ -1,0 +1,7 @@
+"0","rain.ut <- rain.long[-(1:8)*28801,]"
+"0","rain.ut$rain <- melt(ut)$value"
+"0","utfit<-ggplot(rain.ut,aes(y=rain,x=dt,group=sites,colour=sites))+"
+"0","    geom_line()+facet_grid(sites ~ .) + xlab(""Data and Time"") + "
+"0","    ylab(""Rainfall Amount (count/epoch)"") + "
+"0","    ggtitle(""Fitted cutoffs with seasonality at eight locations"")"
+"0","ggsave(filename=here(""results"",""ut.pdf""), plot=utfit, width = 6, height = 5)"

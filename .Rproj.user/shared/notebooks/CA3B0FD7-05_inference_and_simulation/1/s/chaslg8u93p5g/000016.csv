@@ -1,0 +1,6 @@
+"0","p2 <- ggplot(spat.dep,aes(group=variable,fill=variable)) +"
+"0","        geom_histogram(aes(value),binwidth=.5,position = position_dodge())+ "
+"0","        xlab(""Number of simutaneously rainy locations"")+"
+"0","        ylab(""Count"")+"
+"0","        ggtitle(""Histogram of Simutaneous Rain"")"
+"0","p2"

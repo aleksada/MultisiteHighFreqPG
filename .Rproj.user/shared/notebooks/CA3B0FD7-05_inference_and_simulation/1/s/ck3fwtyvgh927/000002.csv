@@ -1,0 +1,3 @@
+"0","error.norm <- matrix(0,NT,NS)"
+"0","set.seed(4)"
+"0","for(s in 1 :NS) error.norm[,s] <- rnorm(NT)"

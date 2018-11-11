@@ -1,0 +1,6 @@
+"0","set.seed(4)"
+"0","niters<-50"
+"0","app.sim <- nsims.app(NT,NS,sigma21.st,beta1.st,b0.st,b1.st,"
+"0","                  alpha,4,niters,raindata)"
+"0","app.sim.norm<-nsims.app.norm(NT,NS,sigma21.norm,beta1.norm,b0.norm,b1.norm,"
+"0","                  niters,raindata)"

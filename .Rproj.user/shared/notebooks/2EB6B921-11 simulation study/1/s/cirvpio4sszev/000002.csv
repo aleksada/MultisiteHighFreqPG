@@ -1,0 +1,4 @@
+"0","combine_plot<-plot_grid(p, p2, align='h',rel_widths = 1.2, rel_heights = 1)"
+"2","Removed 2935 rows containing missing values (geom_path)."
+"2","Removed 2952 rows containing missing values (geom_path)."
+"0","ggsave(filename=here(""results"",""qqsim.pdf""),device='pdf', plot=combine_plot, width = 12, height = 5)"

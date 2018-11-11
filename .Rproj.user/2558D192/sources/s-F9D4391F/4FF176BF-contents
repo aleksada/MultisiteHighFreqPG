@@ -1,0 +1,427 @@
+---
+title: "Function not use"
+author: "Yuxiao Li"
+date: "5/6/2018"
+output: html_document
+---
+
+## Fit using spatial covariance function var1-skew normal
+
+
+```{r likelihood function snorm}
+varlik.sp.var1.sn<-function(params, data, coord, ut, sigt){
+    NS <- ncol(data)
+    NT <- nrow(data)
+    sigma21 <- exp(params[1])   # The variance parameter B1
+    beta1 <- exp(params[2])    # The spatial range parameter B1
+    alpha <- params[3:(2 + NS)] #Skewness parameter
+    # Compute the variograms under the model
+    dist <- matrix(data = 0, nrow = NS, ncol = NS) # The distances between locations
+    for (i in 1:NS) {
+        for (j in 1:NS) {
+            dist[i,j] <- 
+                sqrt((coord[i,2]-coord[j,2])^2+(coord[i,3]-coord[j,3])^2)
+        }
+    }
+    # The covariance matrix under model with nugget effect
+    B1 <- sigma21 * exp(-dist * beta1)
+
+    sum.lik <- 0
+    data.lag1 <- data[-1,]
+    for (s in 1:NS){
+        index.posi <- which(data.lag1[,s] > 0)
+        index.zero <- which(data.lag1[,s] == 0)
+        x <- data.lag1[index.posi,s] - apply(data[index.posi,] * B1[s,],1,sum)
+        u <- ut[index.zero, s]- apply(data[index.zero,] * B1[s,],1,sum)
+        bdelta <- sqrt(2/pi) * alpha[s]/sqrt(1 + alpha[s]^2)
+        omega <- 1/sqrt(1 - bdelta^2)
+        xi <- -omega * bvdelta
+        sum.lik <- sum.lik + 
+            sum(1/sigt[index.posi + 1,s] * dsn(x/sigt[index.posi + 1,s],
+                xi = xi, omega = omega, 
+                alpha = alpha[s], log = TRUE)) +
+            sum(log(max(psn(u/sigt[index.zero + 1, s], xi = xi, 
+                    omega = omega , alpha = alpha[s]),1e-6)))
+    }
+    if (sum.lik == Inf) sum.lik <- 1e+16
+    if (sum.lik == -Inf) sum.lik <- -1e+16
+    return(-sum.lik)
+}
+
+```
+
+##Fitting sigmat using AR(1)-GARCH(1,1) model 
+
+```{r,message=FALSE}
+sigt.fit <- matrix(0,nrow(raindata),ncol(raindata))
+for (i in 1: ncol(raindata)){
+    model.garch <- ugarchspec(variance.model=list(garchOrder=c(1,0)),mean.model = list(armaOrder = c(1, 0)))
+    model.garch.fit <- ugarchfit(data=raindata[,i], spec=model.garch,  solver = 'hybrid' )
+    sigt.fit[,i] <- model.garch.fit@fit$sigma
+}
+
+```
+
+```{r plot sigma}
+rain.sigma <- rain.long[-(1:8)*28801,]
+rain.sigma$rain <- melt(sigt.fit)$value
+sigmafit<-ggplot(rain.sigma,aes(y=rain,x=dt,group=sites,colour=sites))+
+    geom_line()+facet_grid(sites ~ .) + xlab("Data and Time") + 
+    ylab("Rainfall Amount")+ 
+    ggtitle("(b) Fitted Standard Deviation using AR-GARCH model")
+ggsave(filename=here("results","sigma.jpeg"), plot=sigmafit, width = 8, height = 6.5)
+ggsave(filename="/Users/liy0h/Dropbox/My Research/rainfall paper/Paper ARmodel/sigma.jpeg", plot=sigmafit, width = 8, height = 6.5)
+```
+
+##Estimate all other parameters - with spatial covariance var 1-st
+```{r explore}
+NT <- nrow(raindata)
+lmfit <- lm(apply(raindata[-1,],1,sd)~apply(raindata[-NT,],1,mean))
+summary(lmfit)
+b <- lmfit$coef
+```
+
+```{r likelihood function}
+varlik.sp.var1.t <- function(params, data, coord, ut, nu){
+    NS <- ncol(data)
+    NT <- nrow(data)
+    sigma21 <- 0.95/NS*exp(params[1])/(1+exp(params[1]))  # The variance parameter B1
+    beta1 <- exp(params[2])    # The spatial range parameter B1
+    b0 <- exp(params[3])
+    b1 <- exp(params[4])
+    # Compute the variograms under the model
+    dist <- matrix(0, NS, NS) # The distances between locations
+    for (i in 1:NS) {
+        for (j in 1:NS) {
+            dist[i,j] <- 
+                sqrt((coord[i,2]-coord[j,2])^2+(coord[i,3]-coord[j,3])^2)
+        }
+    }
+    # The covariance matrix under model with nugget effect
+    B1 <- sigma21 * exp(- beta1 * dist)
+    sigt_plus <- b0 + b1 * apply(data,1,mean)
+    sum.lik <- 0
+    data.lag1 <- data[-1,]
+    for (s in 1:NS){
+        index.posi <- which(data.lag1[,s] > 0)
+        index.zero <- which(data.lag1[,s] == 0)
+        x <- (data.lag1[index.posi,s] - data[index.posi,] %*% B1[s,])/
+            sigt_plus[index.posi]
+        u <- (ut[index.zero + 1, s] - data[index.zero,] %*% B1[s,])/
+            sigt_plus[index.zero]
+        
+        part1 <- dt(x*sqrt(nu/(nu-2)),df=nu, log=TRUE)
+        part2 <- log(sigt_plus[index.posi])
+        part3 <- pt(u*sqrt(nu/(nu-2)),df=nu,log.p=TRUE)
+        sum.lik <- sum.lik + sum(part1) - sum(part2) + sum(part3)
+    }
+   # message(c(sigma21,beta1,b0,b1))
+    return(-sum.lik)
+}
+```
+
+
+```{r}
+sum(c(y.st)==0)/length(c(y.st))
+sum(c(raindata)==0)/length(c(raindata))
+sqrt(mean((y.st-raindata)^2))/(max(raindata)-min(raindata))
+
+sum(c(y.norm)==0)/length(c(y.norm))
+sum(c(raindata)==0)/length(c(raindata))
+sqrt(mean((y.norm-raindata)^2))/(max(raindata)-min(raindata))
+```
+
+
+```{r optimazation spatial}
+lower.bound <- c()
+lower.bound[1] <- 0  #variance
+lower.bound[2] <- 0  #spatial range
+lower.bound[3] <- 0  #skewness - right skewed
+lower.bound[4] <- 0  #intercept
+lower.bound[5] <- 0  #slope
+
+upper.bound <- c()
+upper.bound[1] <- 1 #variance
+upper.bound[2] <- 10 #spatial range
+upper.bound[3] <- Inf
+upper.bound[4] <- 1
+upper.bound[5] <- 1
+
+init <- c()
+init[1] <- 1/NS #variance
+init[2] <- 1 #spatial range
+init[3] <- 5 #positive skewness alpha from exploratory analysis
+init[4] <- 0.5
+init[5] <- 0.5
+
+cov.optim.rslt.st <- optim(par=init,fn = varlik.sp.var1.st,method = "L-BFGS-B",
+                    data = y.sim, coord = coord, ut = ut, 
+                    hessian = TRUE, lower = lower.bound, upper = upper.bound)
+
+
+
+
+```
+
+
+##Estimate all other parameters - with spatial covariance var 1-sn
+```{r optimazation spatial}
+NT <- nrow(raindata)
+NS <- ncol(raindata)
+lower.bound <- c()
+lower.bound[1] <- 0  #variance
+lower.bound[2] <- 0  #spatial range
+lower.bound[3:(NS + 2)] <- 0 #positive skewness alpha from exploratory analysis
+
+upper.bound <- c()
+upper.bound[1] <- 1 #variance
+upper.bound[2] <- 1 #spatial range
+upper.bound[3:(NS + 2)] <- 50
+
+init <- c()
+init[1] <- 0.3 #variance
+init[2] <- 1/500 #spatial range
+init[3:(NS + 2)] <- 5 #positive skewness alpha from exploratory analysis
+
+cov.optim.rslt.sn <- optim(par=init,fn = varlik.sp.var1.sn,method="L-BFGS-B",
+                    data = raindata, coord = coord, ut = ut,Ft = sigt.fit, 
+                   hessian = TRUE,control=list(fnscale=-1))
+
+```
+
+
+## Fitting B with linear constraint
+```{r likelihood function}
+varlik <- function(params, data, sigt, ut){
+    NS <- ncol(data)
+    NT <- nrow(data)
+    B1 <- matrix(params[1:NS^2],NS,NS,byrow = TRUE)
+    B2 <- matrix(params[NS^2 + (1:NS^2)],NS,NS,byrow = TRUE)
+    alpha <- params[NS^2 + (NS^2 + 1):(NS*(NS + 1))]
+    nu <- 7
+    u <- min(data[data>0])
+    sum.lik <- 0
+    data.lag1 <- data[-1,]
+    data.lag2 <- data[-c(1,2),]
+    for (s in 1:NS){
+        index.posi <- which(data.lag2[,s] > 0)
+        index.zero <- which(data.lag2[,s] == 0)
+        x <- data.lag2[index.posi,s] - apply(data.lag1[index.posi,] * B1[s,],1,sum) -
+            apply(data[index.posi,] * B2[s,],1,sum)
+        bvdelta <- sqrt(nu) * gamma(1/2 * (nu - 1))/sqrt(pi)/gamma(1/2 * nu) * 
+         alpha[s]/sqrt(1 + alpha[s]^2)
+        omega <- 1/sqrt((nu/(nu-2) - bvdelta^2))
+        xi<- -omega * bvdelta
+        sum.lik <- sum.lik + 
+            sum(dst(x/sigt[index.posi], xi = xi, omega = omega, 
+                    alpha = alpha[s], nu = nu, log = TRUE)) +
+            sum(pst(NS * ut[index.zero]/sigt[index.zero,s], xi = xi, 
+                    omega = omega , alpha = alpha[s], nu = nu, log = TRUE))
+    }
+    if (abs(sum.lik) == Inf) sum.lik <- 1e+06
+    return(-sum.lik)
+}
+
+```
+
+## Fitting B using spatial covariance function var2
+```{r likelihood function}
+varlik.sp.var2<-function(params, data, coord, ut, sigt){
+    NS <- ncol(data)
+    NT <- nrow(data)
+    sigma21 <- params[1]   # The variance parameter B1
+    sigma22 <- params[2]   # The variance parameter B2
+    beta1 <- params[3]    # The spatial range parameter B1
+    beta2 <- params[4]    # The spatial range parameter B2
+    alpha <- params[5:(4 + NS)] #Skewness parameter
+    # Compute the variograms under the model
+    dist <- matrix(data = 0, nrow = NS, ncol = NS) # The distances between locations
+    for (i in 1:NS) {
+        for (j in 1:NS) {
+            dist[i,j] <- sqrt((coord[i,2]-coord[j,2])^2+(coord[i,3]-coord[j,3])^2)
+        }
+    }
+    # The covariance matrix under model with nugget effect
+    B1 <- sigma21 * exp(-dist * beta1)
+    B2 <- sigma22 * exp(-dist * beta2)
+    nu <- 7
+    sum.lik <- 0
+    data.lag1 <- data[-1,]
+    data.lag2 <- data[-c(1,2),]
+    for (s in 1:NS){
+        index.posi <- which(data.lag2[,s] > 0)
+        index.zero <- which(data.lag2[,s] == 0)
+        x <- data.lag2[index.posi,s] - apply(data.lag1[index.posi,] * B1[s,],1,sum) -
+            apply(data[index.posi,] * B2[s,],1,sum)
+        bvdelta <- sqrt(nu) * gamma(1/2 * (nu - 1))/sqrt(pi)/gamma(1/2 * nu) * 
+         alpha[s]/sqrt(1 + alpha[s]^2)
+        omega <- 1/sqrt((nu/(nu-2) - bvdelta^2))
+        xi<- -omega * bvdelta
+        sum.lik <- sum.lik + 
+            sum(dst(x/sigt[index.posi], xi = xi, omega = omega, 
+                    alpha = alpha[s], nu = nu, log = TRUE)) +
+            sum(pst(NS * ut[index.zero]/sigt[index.zero,s], xi = xi, 
+                    omega = omega , alpha = alpha[s], nu = nu, log = TRUE))
+    }
+    if (sum.lik == Inf) sum.lik <- 1e+06
+    return(-sum.lik)
+}
+
+```
+
+## Fitting truncation ut based on hourly seasonality -testing
+```{r fit seasonality ut}
+ut.fun <- function(train, test){
+    binaryrain <- c(train)>0
+    NT <- length(binaryrain)
+    t <- 1:NT
+    ht <- floor(12 + 2 * t/(2 * 60)) %% 24
+    H <- 3
+    sint<- matrix(0, length(t), H)
+    cost<- matrix(0, length(t), H)
+    save.aic <- rep(0,H)
+    for(i in 1:H){
+    sint[,i] <- sin(2 * i * pi * ht/24)
+    cost[,i] <- cos(2 * i * pi * ht/24)
+    season.fit <- glm(binaryrain ~ sint[,1:i] + cost[,1:i],family = "binomial")
+    save.aic[i] <- AIC(season.fit)
+}
+H.best <- which(save.aic == min(save.aic))
+season.fit.best <- glm(binaryrain ~ sint[,1:H.best] + cost[,1:H.best], family="binomial")
+fitted.logit <- cbind(1,sint[,1:H.best],cost[,1:H.best]) %*% season.fit.best$coefficients
+
+ut <- quantile(c(test), 1 - exp(fitted.logit)/(1+exp(fitted.logit)))
+
+return(ut)
+}
+```
+
+```{r}
+lower.bound <- c()
+lower.bound[1] <- 0  #variance
+lower.bound[2] <- 0  #spatial range
+lower.bound[3:(NS + 2)] <- 0 #positive skewness alpha from exploratory analysis
+
+upper.bound <- c()
+upper.bound[1] <- 1 #variance
+upper.bound[2] <- 1 #spatial range
+upper.bound[3:(NS + 2)] <- 50
+```
+
+
+
+## Predict sigma t at testing sets
+```{r forecast}
+modelfor <- ugarchforecast(model.garch.fit, data = NULL, n.ahead = 1, n.roll
+                        = length(y.test), out.sample = length(y.test))
+sigt.pred <- modelfor@forecast$sigmaFor[1,-(length(y.test)+1)]
+```
+
+## Plot the results
+```{r plot standard deviation}
+plot.ts(sigt)
+plot.ts(y.test)
+```
+
+
+##Estimate all other parameters - no spatial covariance
+```{r optimazation covariance function}
+data.train <- raindata[seq(1,NT,by=2),1:2]
+data.test <- raindata[-seq(1,NT,by=2),1:2]
+NT <- nrow(raindata)
+NS <- ncol(data.train)
+NT.train <- nrow(data.train)
+NT.test <- NT - NT.train
+ut <- ut.fun(data.train,data.test)
+lower.bound <- c()
+lower.bound[1:(2 * NS^2)] <- -0.1  #B matrix to make it converge
+lower.bound[NS^2 + (NS^2 + 1):(NS * (NS + 1))] <- 0 #positive skewness alpha from exploratory analysis
+
+upper.bound <- c()
+upper.bound[1:(2 * NS^2)] <- 1  #B matrix to make it converge
+upper.bound[NS^2 + (NS ^ 2 + 1):(NS * (NS + 1))] <- 50 #positive skewness alpha from exploratory analysis
+
+init <- c()
+init[1:(2 * NS^2)] <- c(diag(rep(1,NS))) * 0.4  #B matrix to make it converge
+init[NS^2 + (NS^2 + 1):(NS*(NS + 1))] <- 5 #positive skewness alpha from exploratory analysis
+
+ui <- rbind(diag(rep(1, NS^2 + (NS * (NS + 1)))),
+            diag(rep(-1, NS^2 + (NS * (NS + 1)))),
+            cbind(cbind(t(kronecker(diag(rep(-1,NS)),rep(1,NS))),
+                        t(kronecker(diag(rep(-1,NS)),rep(1,NS)))),
+                  matrix(0,NS,NS)))
+ci <- c(lower.bound, -upper.bound, rep(-.9,NS))
+
+optim.rslt <- constrOptim(theta = init, f = varlik, grad = NULL, method="SANN", hessian = TRUE, ui = ui, ci = ci, data = data.train, sigt = sigt, ut = ut)
+```
+
+##Return the estimated values and CIs - no spatial covariance
+```{r estimate result}
+B1 <- matrix(optim.rslt$par[1:NS^2],NS,NS, byrow = TRUE)
+B2 <- matrix(optim.rslt$par[NS^2 + 1:NS^2],NS,NS, byrow = TRUE)
+alpha <- optim.rslt$par[NS^2 + (NS^2 + 1):(NS*(NS + 1))]
+fisher_info <- solve(optim.rslt$hessian)
+prop_sigma <- sqrt(abs(diag(fisher_info)))
+upper <- optim.rslt$par+1.96*prop_sigma
+lower <- optim.rslt$par-1.96*prop_sigma
+interval <- data.frame(value=optim.rslt$par, lower=lower, upper=upper)
+```
+
+##Estimate all other parameters - with spatial covariance var 2
+```{r optimazation spatial}
+data.train <- raindata[1:(NT/2),]
+data.test <- raindata[((NT/2)+1):NT,]
+NT <- nrow(raindata)
+NS <- ncol(data.train)
+NT.train <- nrow(data.train)
+NT.test <- NT - NT.train
+ut <- ut.fun(data.train,data.test)
+lower.bound <- c()
+lower.bound[1:2] <- 0  
+lower.bound[3:4] <- 0
+lower.bound[5:(NS + 4)] <- 0 #positive skewness alpha from exploratory analysis
+
+upper.bound <- c()
+upper.bound[1:2] <- 0.8  #B matrix to make it converge
+upper.bound[3:4] <- 0.1
+upper.bound[5:(NS + 4)] <- 50
+
+init <- c()
+init[1:2] <- 0.5 #B matrix to make it converge
+init[3:4] <- 0.001
+init[5:(NS + 4)] <- 5 #positive skewness alpha from exploratory analysis
+
+cov.optim.rslt <- optim(par=init,fn = varlik.sp, method = "L-BFGS-B",
+                    data = data.train, coord = coord, ut = ut,sigt = sigt, 
+                    lower = lower.bound, upper = upper.bound, hessian = TRUE)
+
+```
+
+
+##Return the estimated values and CIs- with spatial covariance-var2
+```{r est results spatial}
+# Compute the variograms under the model
+dist <- matrix(data = 0, nrow = NS, ncol = NS) # The distances between locations
+for (i in 1:NS) {
+    for (j in 1:NS) {
+        dist[i,j] <- sqrt((coord[i,2]-coord[j,2])^2+(coord[i,3]-coord[j,3])^2)        
+        }
+}
+
+# The covariance matrix under model with nugget effect
+cov.sigma21 <- cov.optim.rslt$par[1]
+cov.sigma22 <- cov.optim.rslt$par[2]
+cov.beta1 <- cov.optim.rslt$par[3]
+cov.beta2 <- cov.optim.rslt$par[4]
+
+cov.B1 <- cov.sigma21 * exp(-dist * cov.beta1)
+cov.B2 <- cov.sigma22 * exp(-dist * cov.beta2)
+
+cov.alpha <- cov.optim.rslt$par[5:(NS + 4)]
+cov.fisher_info <- solve(cov.optim.rslt$hessian)
+cov.prop_sigma <- sqrt(abs(diag(cov.fisher_info)))
+cov.upper <- cov.optim.rslt$par+1.96 * cov.prop_sigma
+cov.lower <- cov.optim.rslt$par-1.96 * cov.prop_sigma
+cov.interval <- data.frame(value = cov.optim.rslt$par, lower = cov.lower, upper = cov.upper)
+```
+

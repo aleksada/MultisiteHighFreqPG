@@ -1,0 +1,6 @@
+"0","y.norm <- matrix(0,NT,NS)"
+"0","for(t in 2: NT){"
+"0","    y.norm[t,] <- B1.norm %*% raindata[t - 1,] + "
+"0","        error.norm[t,] * (b0.norm + b1.norm * mean(raindata[t-1,]))"
+"0","    y.norm[t,] <- ifelse(y.norm[t,] > ut[t,], y.norm[t,], 0)"
+"0","}"

@@ -1,0 +1,7 @@
+"0","rmse.app<-rmse.app.norm<-c()"
+"0","for(i in 1:niters){"
+"0","  rmse.app[i]<-sqrt(mean((app.sim[,,i]-raindata)^2))"
+"0","  rmse.app.norm[i]<-sqrt(mean((app.sim.norm[,,i]-raindata)^2))"
+"0","}"
+"0","mrmse.app<-mean(rmse.app)*100"
+"0","mrmse.app.norm<-mean(rmse.app.norm)*100"

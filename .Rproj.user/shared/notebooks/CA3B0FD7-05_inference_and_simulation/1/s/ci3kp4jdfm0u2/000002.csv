@@ -1,0 +1,7 @@
+"0","quan.app<-quan.app.norm<-matrix(0,niters,10000)"
+"0","for (j in 1 :niters){"
+"0","   quan.app[j,]<- quantile(app.sim[,,j],1:10000/10000) "
+"0","   quan.app.norm[j,]<- quantile(app.sim.norm[,,j],1:10000/10000) "
+"0","   quan.app.true<- quantile(raindata,1:10000/10000) "
+"0","}"
+"0","quan.df.app<-data.frame(x=rep(quan.app.true,3),median=c(apply(quan.app,2,sort)[26,],apply(quan.app.norm,2,sort)[26,],quan.app.true),lower=c(apply(quan.app,2,sort)[2,],apply(quan.app.norm,2,sort)[2,],rep(NA,10000)),upper=c(apply(quan.app,2,sort)[49,],apply(quan.app.norm,2,sort)[49,],rep(NA,10000)),Type=c(rep(""Skew-t"",10000),rep(""Gaussian"",10000),rep(""Truth"",10000)))"

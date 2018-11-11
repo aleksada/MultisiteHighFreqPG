@@ -1,0 +1,2 @@
+"0","pdf(""dryprob.pdf"",width=8, height=6)"
+"0","plot(density(dp.st),xlim=c(0.9,1),xlab=""Probability"",col=2,lwd=2,main=""Dry Probability"")"

@@ -1,0 +1,2 @@
+"0","histraw <- ggplot(rain.long,aes(rain))+geom_histogram(binwidth=.5)+ scale_y_sqrt() + xlab(""Rainfall Amount"") + ylab(""Frequency"") + ggtitle(""(a) Histograms of the Rainfall Data"")"
+"0","ggsave(filename=here(""results"",""histraw.jpeg""), plot=histraw, width = 6, height = 5)"

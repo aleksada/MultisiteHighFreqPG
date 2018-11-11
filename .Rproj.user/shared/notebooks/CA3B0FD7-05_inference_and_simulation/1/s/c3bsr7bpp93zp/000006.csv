@@ -1,0 +1,8 @@
+"0","p1 <- ggplot(data = quan.df.app, aes(x=x, y=median, colour=Type)) + "
+"0","    geom_line(size=0.8) + ylab(""Empirical Quantiles (count/epoch)"") + xlab(""Sample Quantiles (count/epoch)"") +"
+"0","    ggtitle(""The QQ-plot of two models: Obervation vs Simulation"") +"
+"0","    scale_y_continuous()+scale_x_continuous()+"
+"0","    geom_ribbon(aes(ymin=lower, ymax=upper,fill=Type), linetype=2, alpha=0.3) + "
+"0","    scale_color_brewer(palette = ""Dark2"") +    "
+"0","    scale_fill_brewer(palette = ""Dark2"")"
+"0","p1"

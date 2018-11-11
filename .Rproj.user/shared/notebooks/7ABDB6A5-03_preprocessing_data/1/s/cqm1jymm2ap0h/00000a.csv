@@ -1,0 +1,2 @@
+"0","qqraw <- ggplot(rain.long, aes(sample=rain))+ stat_qq()+geom_abline(slope=1, intercept=0)+ggtitle(""(b) Normal QQ plot of the Rainfall Data"")"
+"0","ggsave(filename=here(""results"",""qqraw.jpeg""), plot=qqraw, width = 6, height = 5)"

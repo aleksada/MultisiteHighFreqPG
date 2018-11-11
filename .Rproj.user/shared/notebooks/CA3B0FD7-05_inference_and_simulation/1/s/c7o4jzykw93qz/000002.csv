@@ -1,0 +1,8 @@
+"0","rain.sims <- rain.long[-(1:8)*28801,]"
+"0","rain.sims$rain1 <- melt(y.norm)$value"
+"0","rain.sim.plot.norm<-ggplot(rain.sims,aes(x=dt,group=sites))+"
+"0","    geom_line(aes(y = rain,color='Observation'),alpha=0.6)+"
+"0","     geom_line(aes(y = rain1,color='Simulation'),alpha=0.6) + "
+"0","        facet_grid(sites ~ .) + xlab(""Data and Time"") + ylab(""Amount of Rain"")+"
+"0","    ggtitle(""(b) Simulation vs Observation--Guassian Error"" )"
+"0","rain.sim.plot.norm"

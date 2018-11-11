@@ -1,0 +1,2 @@
+"0","combine_plot<-plot_grid( rain.sim.plot, rain.sim.plot.norm, align='h',rel_widths = 1.2, rel_heights = 1)"
+"0","ggsave(filename=here(""results"",""sim_compare.pdf""),device='pdf', plot=combine_plot, width = 12, height = 10)"

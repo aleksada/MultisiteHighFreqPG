@@ -1,0 +1,3 @@
+"0","rainraw <- ggplot(rain.long,aes(y=rain,x=dt,group=sites,colour=sites))+"
+"0","    geom_line()+facet_grid(sites ~ .) + xlab(""Data and Time"") + ylab(""Rainfall Amount"")+ ggtitle("" Eight time series of rainfall amounts inside Univeristy of Lausanne"")"
+"0","ggsave(filename=here(""results"",""rainraw.pdf""), plot=rainraw, width = 11, height = 9)"

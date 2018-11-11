@@ -1,0 +1,318 @@
+---
+title: "Parameter Estimation"
+author: "Yuxiao Li"
+date: "`r Sys.Date()`"
+output: github_document
+---
+
+# Overview
+This file contains the procedure of estimating parameters by maximizing the log-likelihood function using the skew-t model and Gaussian model. The function to optimize for our model is called "varlik.sp.var1.st", and it will be called repeatly after that. The function to optimize for Gaussian model is called "varlik.sp.var1.norm".
+
+We use the R build-in optimization function, "optim()", with the default method "Nelder-Mead". The method is an implementation of that of Nelder and Mead (1965), that uses only function values and is robust but relatively slow. The uncertainty is calculated by asymptotic confidence interval.
+
+$u_t$ is optimized separately by logistic regression by considering the day-of-year seasonality.
+
+In general, we want to
+
+* estimate ut and save the figures of fitted ut
+* find the best degree of freedom
+* estimate other parameters
+* calculate the confidence interval
+* save all of the results for future use
+
+# Librares and Data
+
+## Libraries
+
+```{r load_libs,message=FALSE}
+library(here)
+library(sn)
+library(geoR)
+library(reshape2)
+```
+
+## Data
+
+>Different resolution can be used for the analysis, the default setting is to use the rawdata, but we can also use the aggregated data in 1-minute, 15-minute, and hourly resolution.
+
+```{r load_data}
+
+load(here("results", "rain.long.RData"))
+raindata <- matrix(rain.long$rain[1:230400],28800,8)
+sep <- 1
+#load(here("results", "rain.1min.df.RData"))
+#raindata <- matrix(rain.1min.df$rain[1:115200],14400,8)
+#sep <- 2
+#load(here("results", "rain.15min.df.RData"))
+#raindata <- matrix(rain.15min.df$rain[1:7680],960,8)
+#sep <- 30
+##load(here("results", "rain.hour.df.RData"))
+#raindata <- matrix(rain.hour.df$rain[1:1920],240,8)
+#sep <- 120
+```
+
+#Required Functions
+## Fit using matern covariance function and skew-t error
+```{r likelihood function}
+varlik.sp.var1.st <- function(params, data, coord, ut, nu){
+    NS <- ncol(data)
+    NT <- nrow(data)
+    #sigma21 <- exp(params[1])
+    sigma21 <- exp(params[1])/(1+exp(params[1]))  # The variance parameter B1
+    beta1 <- exp(params[2])    # The spatial range parameter B1
+    b0 <- exp(params[3])
+    b1 <- exp(params[4])
+    alpha <- exp(params[5])
+    nu <- nu ## Degree of freedom
+    # Compute the variograms under the model
+    dist <- matrix(0, NS, NS) # The distances between locations
+    for (i in 1:NS) {
+        for (j in 1:NS) {
+            dist[i,j] <- 
+                sqrt((coord[i,2]-coord[j,2])^2+(coord[i,3]-coord[j,3])^2)
+        }
+    }
+    # The covariance matrix under model with nugget effect
+    B1 <- sigma21 * matern(dist,beta1,1)
+    #if(eigen(B1)$values[1] >= 0.99) {
+     #   warning("The process is not stationary, return -1e16")
+      #  return(1e16)
+       # }
+    sigt_plus <- b0 + b1 * apply(data,1,mean)
+    sum.lik <- 0
+    data.lag1 <- data[-1,]
+    for (s in 1:NS){
+        index.posi <- which(data.lag1[,s] > 0)
+        index.zero <- which(data.lag1[,s] == 0)
+        x <- (data.lag1[index.posi,s] - data[index.posi,] %*% B1[s,])/
+            sigt_plus[index.posi]
+        u <- (ut[index.zero + 1, s] - data[index.zero,] %*% B1[s,])/
+            sigt_plus[index.zero]
+        bvdelta <- sqrt(nu) * gamma(1/2 * (nu - 1))/sqrt(pi)/gamma(1/2 * nu) * 
+         alpha/sqrt(1 + alpha^2)
+        omega <- 1/sqrt((nu/(nu-2) - bvdelta^2))
+        xi<- -omega * bvdelta
+        part1 <- dst(x, xi, omega, alpha, nu, log=TRUE)
+        part2 <- log(sigt_plus[index.posi])
+        part3 <- log(pst(u, xi, omega, alpha, nu))
+        sum.lik <- sum.lik + sum(part1) - sum(part2) + sum(part3)
+    }
+        #message(c(sigma21,beta1,alpha,b0,b1))
+    return(-sum.lik)
+}
+```
+
+
+## Fit using matern covariance function and normal error
+```{r likelihood function}
+varlik.sp.var1.norm <- function(params, data, coord, ut){
+    NS <- ncol(data)
+    NT <- nrow(data)
+    #sigma21 <- exp(params[1])
+    sigma21 <- exp(params[1])/(1+exp(params[1]))  # The variance parameter B1
+    beta1 <- exp(params[2])    # The spatial range parameter B1
+    b0 <- exp(params[3])
+    b1 <- exp(params[4])
+    # Compute the variograms under the model
+    dist <- matrix(0, NS, NS) # The distances between locations
+    for (i in 1:NS) {
+        for (j in 1:NS) {
+            dist[i,j] <- 
+                sqrt((coord[i,2]-coord[j,2])^2+(coord[i,3]-coord[j,3])^2)
+        }
+    }
+    # The covariance matrix under model with nugget effect
+    B1 <- sigma21 * geoR::matern(dist,beta1,1)
+    sigt_plus <- b0 + b1 * apply(data,1,mean)
+    sum.lik <- 0
+    data.lag1 <- data[-1,]
+    for (s in 1:NS){
+        index.posi <- which(data.lag1[,s] > 0)
+        index.zero <- which(data.lag1[,s] == 0)
+        x <- (data.lag1[index.posi,s] - data[index.posi,] %*% B1[s,])/
+            sigt_plus[index.posi]
+        u <- (ut[index.zero + 1, s] - data[index.zero,] %*% B1[s,])/
+            sigt_plus[index.zero]
+        
+        part1 <- dnorm(x, log=TRUE)
+        part2 <- log(sigt_plus[index.posi])
+        part3 <- pnorm(u,log.p=TRUE)
+        sum.lik <- sum.lik + sum(part1) - sum(part2) + sum(part3)
+    }
+   # message(c(sigma21,beta1,b0,b1))
+    return(-sum.lik)
+}
+```
+
+
+## Fit cut-offs ut based on annual seasonality and logistic model
+```{r fit seasonality ut}
+ut.fun <- function(data,sep){
+    binaryrain <- data > 0
+    NT <- length(binaryrain)
+    t <- (1:NT)-1
+    ht <- floor(94.5 + sep*t/(2 * 60 * 24))
+    H <- 10
+    sint<- matrix(0, length(t), H)
+    cost<- matrix(0, length(t), H)
+    save.aic <- rep(0,H)
+    for(i in 1:H){
+    sint[,i] <- sin(2 * i * pi * ht/365)
+    cost[,i] <- cos(2 * i * pi * ht/365)
+    season.fit <- glm(binaryrain ~ sint[,1:i] + cost[,1:i],family = "binomial")
+    save.aic[i] <- AIC(season.fit)
+}
+H.best <- which(save.aic == min(save.aic))
+season.fit.best <- glm(binaryrain ~ sint[,1:H.best] + cost[,1:H.best], family="binomial")
+fitted <- season.fit.best$fitted
+
+ut <- quantile(data, 1 - fitted)
+
+return(ut)
+}
+```
+
+#Estimation
+
+##Fit ut 
+
+```{r ut fit}
+ut <- matrix(0,nrow(raindata),ncol(raindata))
+for (i in 1: ncol(raindata)){
+ut[,i] <- ut.fun(raindata[,i],sep=sep)
+}
+ut[nrow(raindata),] <- 1
+ut <- ifelse(ut>1,ut,1)
+```
+
+##Plot fitted ut and save the plot
+
+```{r ut plot}
+rain.ut <- rain.long[-(1:8)*28801,]
+rain.ut$rain <- melt(ut)$value
+utfit<-ggplot(rain.ut,aes(y=rain,x=dt,group=sites,colour=sites))+
+    geom_line()+facet_grid(sites ~ .) + xlab("Data and Time") + 
+    ylab("Rainfall Amount (count/epoch)") + 
+    ggtitle("Fitted cutoffs with seasonality at eight locations")
+ggsave(filename=here("results","ut.pdf"), plot=utfit, width = 11, height = 9)
+#ggsave(filename="/Users/liy0h/Dropbox/My Research/rainfall paper/Paper ARmodel/ut.jpeg", plot=utfit, width = 8, height = 6.5)
+```
+
+##Optimization nu
+>This process requires several hours to run, so we do not run it in default.
+
+```{r optimize nu, eval=FALSE}
+va<-c()
+for (i in 1:10){
+NT <- nrow(raindata)
+NS <- ncol(raindata)
+
+init <- c()
+#init[1] <- 0.1/(1/NS-0.1) #variance
+init[1] <- 0.1
+init[2] <- 1 #spatial range
+init[3] <- 0.5
+init[4] <- 0.5
+init[5] <- 1 #positive skewness alpha from exploratory analysis
+init <- log(init)
+cov.optim.rslt.st <- optim(par=init,fn = varlik.sp.var1.st,method = "CG",
+                    data = raindata, coord = coord, ut = ut, nu = i+2)
+va[i]<-cov.optim.rslt.st$value
+}
+nu.best<-which.min(va)+2
+```
+
+```{r estimate}
+NT <- nrow(raindata)
+NS <- ncol(raindata)
+
+init <- c()
+#init[1] <- 0.1/(1/NS-0.1) #variance
+init[1] <- 0.1
+init[2] <- 1 #spatial range
+init[3] <- .5
+init[4] <- .5
+init[5] <- 1 #positive skewness alpha
+init <- log(init)
+cov.optim.rslt.st <- optim(par=init,fn = varlik.sp.var1.st,
+                    data = raindata, coord = coord, ut = ut, nu = 4, 
+                    hessian = TRUE)
+```
+
+
+```{r norm}
+NT <- nrow(raindata)
+NS <- ncol(raindata)
+
+init <- c()
+#init[1] <- 0.1/(1/NS-0.1) #variance
+init[1] <- 0.1
+init[2] <- 1 #spatial range
+init[3] <- 0.5
+init[4] <- 0.5
+init<-log(init)
+cov.optim.rslt.norm <- optim(par = init,fn = varlik.sp.var1.norm,
+                    data = raindata, coord = coord, ut = ut, 
+                    hessian = TRUE)
+
+```
+
+
+##Return the estimated values and CIs - with spatial covariance
+```{r est results spatial}
+cov.optim.rslt <- cov.optim.rslt.st
+
+# The covariance matrix under model with nugget effect
+cov.sigma21 <- exp(cov.optim.rslt$par[1])/(1+exp(cov.optim.rslt$par[1]))
+#cov.sigma21 <- exp(cov.optim.rslt$par[1])
+cov.beta1 <- exp(cov.optim.rslt$par[2])
+cov.b0 <- exp(cov.optim.rslt$par[3])
+cov.b1 <- exp(cov.optim.rslt$par[4])
+cov.alpha <- exp(cov.optim.rslt$par[5])
+cov.fisher_info <- solve(cov.optim.rslt$hessian)
+cov.prop_sigma <- sqrt(diag(cov.fisher_info))
+cov.upper <- cov.optim.rslt$par + 1.96 * cov.prop_sigma
+cov.lower <- cov.optim.rslt$par - 1.96 * cov.prop_sigma
+cov.interval <- data.frame(value = cov.optim.rslt$par, lower = cov.lower, upper = cov.upper)
+back.trans.upper<-c(exp(cov.upper[1])/(1+exp(cov.upper[1])),exp(cov.upper[2:5]))
+back.trans.lower<-c(exp(cov.lower[1])/(1+exp(cov.lower[1])),exp(cov.lower[2:5]))
+back.trans.expect<-c(cov.sigma21,cov.beta1,cov.b0,cov.b1,cov.alpha)
+back.trans.interval <- data.frame(value = back.trans.expect, lower = back.trans.lower, upper = back.trans.upper)
+```
+
+```{r est results spatial}
+cov.optim.rslt <- cov.optim.rslt.norm
+
+# The covariance matrix under model with nugget effect
+cov.sigma21.norm <- exp(cov.optim.rslt$par[1])/(1+exp(cov.optim.rslt$par[1]))
+#cov.sigma21.norm <- exp(cov.optim.rslt$par[1])
+cov.beta1.norm <- exp(cov.optim.rslt$par[2])
+cov.b0.norm <- exp(cov.optim.rslt$par[3])
+cov.b1.norm <- exp(cov.optim.rslt$par[4])
+cov.fisher_info.norm <- solve(cov.optim.rslt$hessian)
+cov.prop_sigma.norm <- sqrt(diag(cov.fisher_info.norm))
+cov.upper.norm <- cov.optim.rslt$par + 1.96 * cov.prop_sigma.norm
+cov.lower.norm <- cov.optim.rslt$par - 1.96 * cov.prop_sigma.norm
+cov.interval.norm <- data.frame(value = cov.optim.rslt$par, lower = cov.lower.norm, upper = cov.upper.norm)
+back.trans.upper.norm<-c(exp(cov.upper.norm[1])/(1+exp(cov.upper.norm[1])),
+                         exp(cov.upper.norm[2:4]))
+back.trans.lower.norm<-c(exp(cov.lower.norm[1])/(1+exp(cov.lower.norm[1])),
+                         exp(cov.lower.norm[2:4]))
+back.trans.expect.norm<-c(cov.sigma21.norm,cov.beta1.norm,cov.b0.norm,cov.b1.norm)
+back.trans.interval.norm <- data.frame(value = back.trans.expect.norm, lower = back.trans.lower.norm, upper = back.trans.upper.norm)
+```
+
+
+# Save the Estimation
+
+Now we save the results for later use, both as an 
+RData object
+
+```{r save_estimations}
+results.VAR1 <- list(sigma21 = cov.sigma21, beta1 = cov.beta1, alpha = cov.alpha,b0 = cov.b0,b1 = cov.b1,ut = ut,interval = back.trans.interval)
+save(results.VAR1,
+     file = here("results", "estimation.cov.VAR1.RData"))
+results.VAR1.norm <- list(sigma21 = cov.sigma21.norm, beta1 = cov.beta1.norm, b0 = cov.b0.norm,b1 = cov.b1.norm, ut=ut, interval = back.trans.interval.norm)
+save(results.VAR1.norm,
+     file = here("results", "estimation.cov.VAR1.norm.RData"))
+```
