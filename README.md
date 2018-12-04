@@ -11,9 +11,9 @@ The motivating data was collected by Institute of Earth Surface Dynamics (IDYST)
 The following figure shows the performance comparison between our proposed model with skew-t errors and a similar model with Gaussian errors (Koch (2016)[2]). We show that our model can capture the high intensity better than existing methods.
 ![QQplot]()
 
-<a>
+<a href="https://github.com/aleksada/Multisite_HighFreq_PG/master">
 <div align="center">
-	<img src="imgs/qqapp.jpg" width="80%" height="10%"/>
+	<img src="imgs/qqapp.jpg" width="50%" height="10%"/>
 </div>
 </a>
 
