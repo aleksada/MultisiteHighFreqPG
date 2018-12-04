@@ -1,6 +1,6 @@
 ## Multi-Site High-Frequency Stochastic Precipitation Generator
 
-This is a github repository for the paper entitled "Multi-Site High-Frequency Stochastic Precipitation Generator Using Censored Skew-Symmetric Distributions". The paper is currently submitted.
+This is a github repository for the paper entitled "Multi-Site High-Frequency Stochastic Precipitation Generator Using Censored Skew-Symmetric Distributions". The paper is currently under review.
 
 
 
