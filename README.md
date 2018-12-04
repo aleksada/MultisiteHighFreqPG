@@ -32,8 +32,4 @@ A simple one-click version: Run 99_make_all.R
 
 ### Poster
 
-<a href="https://github.com/aleksada/Multisite_HighFreq_PG/tree/master">
-<div align="center">
-	<img src="results/qqapp.pdf" width="80%" height="50%"/>
-</div>
-</a>
+![QQplot](https://github.com/aleksada/Multisite_HighFreq_PG/tree/master/results/qqapp.pdf)
