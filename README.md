@@ -9,7 +9,7 @@ The motivating data was collected by Institute of Earth Surface Dynamics (IDYST)
 ### Main Results
 
 The following figure shows the performance comparison between our proposed model with skew-t errors and a similar model with Gaussian errors (Koch (2016)[2]). We show that our model can capture the high intensity better than existing methods.
-![QQplot](results/qqapp.jpg)
+![QQplot](imgs/qqapp.jpg)
 
 ### Required R packages
 * Rmarkdown
@@ -53,4 +53,4 @@ One can also run the scripts one by one by following the steps below. All of the
 
 ### Poster
 
-![QQplot](results/poster.jpg)
+![QQplot](imgs/poster.jpg)
