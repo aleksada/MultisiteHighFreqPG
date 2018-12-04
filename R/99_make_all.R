@@ -1,6 +1,6 @@
 #' ---
 #' title: Make All
-#' author: Keith Baggerly
+#' author: Yuxiao Li
 #' date: "`r Sys.Date()`"
 #' output: github_document
 #' ---
@@ -15,9 +15,10 @@ if(!dir.exists(here("results"))){
 files_in_r_to_run <- 
   c("01_gather_data.R",
     "02_describing_raw_data.Rmd",
-    "03_preprocessing_data_base_r_version.Rmd",
-    "04_check_sample_matches_and_corrs.Rmd",
-    "05_report_matches_to_potti_columns.Rmd")
+    "03_preprocessing_data.Rmd",
+    "04_estimating_parameters.Rmd",
+    "05_inference_and_simulation.Rmd",
+    "11_simulation study.Rmd")
 
 for(i1 in 1:length(files_in_r_to_run)){
   
@@ -28,7 +29,3 @@ for(i1 in 1:length(files_in_r_to_run)){
   
 }
 
-rmarkdown::render(here("README.Rmd"),
-                  output_format = 
-                    github_document(html_preview = TRUE, toc = TRUE),
-                  output_dir = here())
