@@ -7,17 +7,7 @@ This is a github repository for the submitted paper entitled "Multi-Site High-Fr
 
 ### Results
 
-<a href="https://github.com/aleksada/Multisite_HighFreq_PG/tree/master">
-<div align="center">
-	<img src="results/qqapp.pdf" width="80%" height="50%"/>
-</div>
-</a>
-
-<a href="https://github.com/aleksada/Multisite_HighFreq_PG/tree/master">
-<div align="center">
-	<img src="results/qqapp.pdf" width="80%" height="50%"/>
-</div>
-</a>
+![QQplot](https://github.com/aleksada/Multisite_HighFreq_PG/tree/master/results/qqapp.pdf)
 
 ### Required R packages
 
