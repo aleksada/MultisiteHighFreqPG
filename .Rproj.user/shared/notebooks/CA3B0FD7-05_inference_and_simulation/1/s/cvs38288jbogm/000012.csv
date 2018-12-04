@@ -1,3 +1,0 @@
-"0","pdf(""condidry.pdf"",width=10, height=5)"
-"0","par(mfrow=c(1,2))"
-"0","plot(density(condi.prob[3,]),main='Wet|Dry',xlab=""Transition probability"",xlim=c(0,0.5),lwd=2,col=2)"

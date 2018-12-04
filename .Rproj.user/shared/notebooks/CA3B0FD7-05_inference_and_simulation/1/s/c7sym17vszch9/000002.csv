@@ -1,7 +1,41 @@
 "0","library(here)"
+"2","here() starts at /Users/liy0h/Dropbox/My Research/rainfall paper/rainfall generator
+"
 "0","library(geoR)"
+"2","--------------------------------------------------------------
+ Analysis of Geostatistical Data
+ For an Introduction to geoR go to http://www.leg.ufpr.br/geoR
+ geoR version 1.7-5.2.1 (built on 2016-05-02) is now loaded
+--------------------------------------------------------------
+
+"
 "0","library(sn)"
+"2","Loading required package: stats4
+"
+"2","
+Attaching package: ‘stats4’
+
+"
+"2","The following object is masked from ‘package:spam’:
+
+    mle
+
+"
+"2","Package 'sn', 1.5-1 (2017-11-22). Type 'help(SN)' for summary information.
+The package redefines function 'sd' but its usual working is unchanged.
+"
+"2","
+Attaching package: ‘sn’
+
+"
+"2","The following object is masked from ‘package:stats’:
+
+    sd
+
+"
 "0","library(cowplot)"
+"2","Loading required package: ggplot2
+"
 "2","
 Attaching package: ‘cowplot’
 

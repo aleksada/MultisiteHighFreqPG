@@ -43,7 +43,7 @@ rain.long$Time <- format((rain.long$dt) ,format = "%H:%M:%S")
 
 ```{r ggplot}
 rainraw <- ggplot(rain.long,aes(y=rain,x=dt,group=sites,colour=sites))+
-    geom_line()+facet_grid(sites ~ .) + xlab("Data and Time") + ylab("Rainfall Amount")+ ggtitle(" Eight time series of rainfall amounts inside Univeristy of Lausanne")
+    geom_line()+facet_grid(sites ~ .) + xlab("Data and Time") + ylab("Rainfall Amount")+ ggtitle(" Eight time series of rainfall amounts inside the Univeristy of Lausanne")
 ggsave(filename=here("results","rainraw.pdf"), plot=rainraw, width = 11, height = 9)
 #ggsave(filename="/Users/liy0h/Dropbox/My Research/rainfall paper/Paper ARmodel/rainraw.pdf", plot=rainraw, width = 8, height = 6.5)
 
@@ -56,7 +56,9 @@ ggsave(filename="/Users/liy0h/Dropbox/My Research/rainfall paper/Paper ARmodel/h
 ```
 
 ```{r qqplot}
-qqraw <- ggplot(rain.long, aes(sample=rain))+ stat_qq()+geom_abline(slope=1, intercept=0)+ggtitle("(b) Normal QQ plot of the Rainfall Data")
+qqraw <- ggplot(rain.long, aes(sample=rain))+ stat_qq()+geom_abline(slope=1, intercept=0) +
+    xlab("Theoretical") + ylab("Sample") +
+    ggtitle("(b) Normal QQ Plot of the Rainfall Data")
 ggsave(filename=here("results","qqraw.jpeg"), plot=qqraw, width = 6, height = 5)
 ggsave(filename="/Users/liy0h/Dropbox/My Research/rainfall paper/Paper ARmodel/qqraw.jpeg", plot=qqraw, width = 6, height = 5)
 ```

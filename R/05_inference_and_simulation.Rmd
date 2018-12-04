@@ -356,7 +356,7 @@ round(c(wcw.r,dcw.r,wcd.r,dcd.r),3)
 ```{r}
 p1 <- ggplot(data = quan.df.app, aes(x=x, y=median, colour=Type)) + 
     geom_line(size=0.8) + ylab("Empirical Quantiles (count/epoch)") + xlab("Sample Quantiles (count/epoch)") +
-    ggtitle("The QQ-plot of two models: Obervation vs Simulation") +
+    ggtitle("QQ Plot of the Observation and Simulation Models") +
     scale_y_continuous()+scale_x_continuous()+
     geom_ribbon(aes(ymin=lower, ymax=upper,fill=Type), linetype=2, alpha=0.3) + 
     scale_color_brewer(palette = "Dark2") +    
@@ -371,7 +371,7 @@ p2 <- ggplot(spat.dep,aes(group=variable,fill=variable)) +
         geom_histogram(aes(value),binwidth=.5,position = position_dodge())+ 
         xlab("Number of simutaneously rainy locations")+
         ylab("Count")+
-        ggtitle("Histogram of Simutaneous Rain")
+        ggtitle("Histogram of Simultaneous Rain")
 p2
 
 ```
@@ -380,7 +380,7 @@ p2
 ```{r}
 p.cons <- ggplot(data = quan.cons, aes(x=x, y=median, colour=Type)) + 
     geom_line(size=0.8) + ylab("Empirical Quantiles (count/epoch)") + xlab("Sample Quantiles (count/epoch)") +
-    ggtitle("The QQ-plot of the dry spell length") +
+    ggtitle("QQ-plot of the dry spell length") +
     scale_y_continuous()+scale_x_continuous()+
     geom_ribbon(aes(ymin=lower, ymax=upper,fill=Type), linetype=2, alpha=0.3) + 
     scale_color_brewer(palette = "Dark2") +    
@@ -392,7 +392,7 @@ p.cons
 ```{r}
 w.p.cons <- ggplot(data = w.quan.cons, aes(x=x, y=median, colour=Type)) + 
     geom_line(size=0.8) + ylab("Empirical Quantiles (count/epoch)") + xlab("Sample Quantiles (count/epoch)") +
-    ggtitle("The QQ-plot of the wet spell length") +
+    ggtitle("QQ-plot of the wet spell length") +
     scale_y_continuous()+scale_x_continuous()+
     geom_ribbon(aes(ymin=lower, ymax=upper,fill=Type), linetype=2, alpha=0.3) + 
     scale_color_brewer(palette = "Dark2") +    
@@ -460,7 +460,7 @@ ggsave(filename=here("results","length.pdf"),device='pdf', plot=p.cons,width = 6
 ggsave(filename=here("results","wetlength.pdf"),device='pdf', plot=w.p.cons,width = 6, height = 5)
 ```
 
-```{r}
+```{r,eval=FALSE}
 pdf("condidry.pdf",width=10, height=5)
 par(mfrow=c(1,2))
 plot(density(condi.prob[3,]),main='Wet|Dry',xlab="Transition probability",xlim=c(0,0.5),lwd=2,col=2)
