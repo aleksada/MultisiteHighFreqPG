@@ -35,7 +35,7 @@ To reproduce the tables and figures, one can clone or download the repository an
 
 The file "99_make_all.R" offers a simple one-click way to reproduce all of the results. It will take several hours to run the programs. 
 
-One can also run the scripts one by one by following the steps below. All of the scripts are self explained and writen in either .R or .Rmd format.
+One can also run the scripts one by one by following the steps below. All of the scripts are self-explained and written in either .R or .Rmd format.
 
 1. (optional) 01_gather_data.R file provides a automatic way to obtain the data used in this study. The downloaded data are stored in /data directory. Since the datasets are alreadly uploaded, you do not have to run this script.
 1. 02_describing_raw_data.Rmd file reads the raw data and provides some simple description.
