@@ -29,6 +29,7 @@ The following figure shows the performance comparison between our proposed model
 * geoR
 * cowplot
 
+Please run "install_packages.R" file first to make sure the required R packages are installed.
 
 ### Run
 To reproduce the tables and figures, one can clone or download the repository and run the files in the directory ./R.
