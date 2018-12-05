@@ -63,6 +63,10 @@ qqraw
 ggsave(filename=here("results","qqraw.pdf"), plot=qqraw, width = 6, height = 5)
 ```
 
+```{r distributional table}
+table(unlist(rain.raw[-28801,2:9])) ##The last point was removed to get 10-day data
+```
+
 
 
 ##Minutely Data
