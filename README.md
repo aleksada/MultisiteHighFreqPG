@@ -32,9 +32,9 @@ The following figure shows the performance comparison between our proposed model
 Please run "install_packages.R" file first to make sure the required R packages are installed.
 
 ### Run
-To reproduce the tables and figures, one can clone or download the repository and run the files in the directory ./R.
+To reproduce the tables and figures, one can clone or download the repository and open the "rainfall generator.Rproj" to run the codes. The source codes are store in the directory /R.
 
-The file "99_make_all.R" offers a simple one-click way to reproduce all of the results. It will take several hours to run the programs. 
+The file "99_make_all.R" offers a simple one-click way to reproduce all of the results. It will take several hours to run. 
 
 One can also run the scripts one by one by following the steps below. All of the scripts are self-explained and written in either .R or .Rmd format.
 
