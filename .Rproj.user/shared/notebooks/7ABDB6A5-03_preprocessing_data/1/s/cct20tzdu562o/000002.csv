@@ -1,5 +1,0 @@
-"0","hourmean <- rain.long[,2:5] %>% group_by(G=trunc(120:(n()+119)/120))"
-"0","rain.hour <- tapply(hourmean$rain,hourmean$G,sum)"
-"0","rain.hour.df <- data.frame(dt = rain.long$dt[seq(1,dim(rain.long)[1],by=120)],sites = rain.long$sites[seq(1,dim(rain.long)[1],by=120)],rain = rain.hour)"
-"0","ggplot(rain.hour.df,aes(y=rain,x=dt,group=sites,colour=sites))+"
-"0","    geom_line()+facet_grid(sites ~ .) + xlab(""Data and Time"") + ylab(""Rainfall Amount"")"

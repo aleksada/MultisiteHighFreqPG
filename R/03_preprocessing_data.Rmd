@@ -24,6 +24,7 @@ library(here)
 library(reshape2)
 library(ggplot2)
 library(dplyr)
+library(cowplot)
 ```
 
 # Change the data as dataframe
@@ -45,22 +46,21 @@ rain.long$Time <- format((rain.long$dt) ,format = "%H:%M:%S")
 rainraw <- ggplot(rain.long,aes(y=rain,x=dt,group=sites,colour=sites))+
     geom_line()+facet_grid(sites ~ .) + xlab("Data and Time") + ylab("Rainfall Amount")+ ggtitle(" Eight time series of rainfall amounts inside the Univeristy of Lausanne")
 ggsave(filename=here("results","rainraw.pdf"), plot=rainraw, width = 11, height = 9)
-#ggsave(filename="/Users/liy0h/Dropbox/My Research/rainfall paper/Paper ARmodel/rainraw.pdf", plot=rainraw, width = 8, height = 6.5)
 
 ```
 
 ```{r histogram}
 histraw <- ggplot(rain.long,aes(rain))+geom_histogram(binwidth=.5)+ scale_y_sqrt() + xlab("Rainfall Amount") + ylab("Frequency") + ggtitle("(a) Histograms of the Rainfall Data")
-ggsave(filename=here("results","histraw.jpeg"), plot=histraw, width = 6, height = 5)
-ggsave(filename="/Users/liy0h/Dropbox/My Research/rainfall paper/Paper ARmodel/histraw.jpeg", plot=histraw, width = 6, height = 5)
+histraw 
+ggsave(filename=here("results","histraw.pdf"), plot=histraw, width = 6, height = 5)
 ```
 
 ```{r qqplot}
 qqraw <- ggplot(rain.long, aes(sample=rain))+ stat_qq()+geom_abline(slope=1, intercept=0) +
     xlab("Theoretical") + ylab("Sample") +
     ggtitle("(b) Normal QQ Plot of the Rainfall Data")
-ggsave(filename=here("results","qqraw.jpeg"), plot=qqraw, width = 6, height = 5)
-ggsave(filename="/Users/liy0h/Dropbox/My Research/rainfall paper/Paper ARmodel/qqraw.jpeg", plot=qqraw, width = 6, height = 5)
+qqraw
+ggsave(filename=here("results","qqraw.pdf"), plot=qqraw, width = 6, height = 5)
 ```
 
 

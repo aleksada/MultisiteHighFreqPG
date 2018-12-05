@@ -1,5 +1,0 @@
-"0","minute15mean <- rain.long[,2:5] %>% group_by(G=trunc(30:(n()+29)/30))"
-"0","rain.15min <- tapply(minute15mean$rain,minute15mean$G,sum)"
-"0","rain.15min.df <- data.frame(dt = rain.long$dt[seq(1,dim(rain.long)[1],by=30)],sites = rain.long$sites[seq(1,dim(rain.long)[1],by=30)],rain = rain.15min)"
-"0","ggplot(rain.15min.df,aes(y=rain,x=dt,group=sites,colour=sites))+"
-"0","    geom_line()+facet_grid(sites ~ .) + xlab(""Data and Time"") + ylab(""Rainfall Amount"")"

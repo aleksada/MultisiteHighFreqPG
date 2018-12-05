@@ -53,7 +53,7 @@ sep <- 1
 
 #Required Functions
 ## Fit using matern covariance function and skew-t error
-```{r likelihood function}
+```{r likelihood function skew t}
 varlik.sp.var1.st <- function(params, data, coord, ut, nu){
     NS <- ncol(data)
     NT <- nrow(data)
@@ -104,7 +104,7 @@ varlik.sp.var1.st <- function(params, data, coord, ut, nu){
 
 
 ## Fit using matern covariance function and normal error
-```{r likelihood function}
+```{r likelihood function normal}
 varlik.sp.var1.norm <- function(params, data, coord, ut){
     NS <- ncol(data)
     NT <- nrow(data)
@@ -195,7 +195,6 @@ utfit<-ggplot(rain.ut,aes(y=rain,x=dt,group=sites,colour=sites))+
     ylab("Rainfall Amount (count/epoch)") + 
     ggtitle("Fitted cutoffs with seasonality at eight locations")
 ggsave(filename=here("results","ut.pdf"), plot=utfit, width = 11, height = 9)
-#ggsave(filename="/Users/liy0h/Dropbox/My Research/rainfall paper/Paper ARmodel/ut.jpeg", plot=utfit, width = 8, height = 6.5)
 ```
 
 ##Optimization nu
@@ -222,7 +221,7 @@ va[i]<-cov.optim.rslt.st$value
 nu.best<-which.min(va)+2
 ```
 
-```{r estimate}
+```{r estimate skew t}
 NT <- nrow(raindata)
 NS <- ncol(raindata)
 
@@ -240,7 +239,7 @@ cov.optim.rslt.st <- optim(par=init,fn = varlik.sp.var1.st,
 ```
 
 
-```{r norm}
+```{r normal}
 NT <- nrow(raindata)
 NS <- ncol(raindata)
 
@@ -259,7 +258,7 @@ cov.optim.rslt.norm <- optim(par = init,fn = varlik.sp.var1.norm,
 
 
 ##Return the estimated values and CIs - with spatial covariance
-```{r est results spatial}
+```{r est results spatial skew t}
 cov.optim.rslt <- cov.optim.rslt.st
 
 # The covariance matrix under model with nugget effect
@@ -280,7 +279,7 @@ back.trans.expect<-c(cov.sigma21,cov.beta1,cov.b0,cov.b1,cov.alpha)
 back.trans.interval <- data.frame(value = back.trans.expect, lower = back.trans.lower, upper = back.trans.upper)
 ```
 
-```{r est results spatial}
+```{r est results spatial normal}
 cov.optim.rslt <- cov.optim.rslt.norm
 
 # The covariance matrix under model with nugget effect

@@ -18,7 +18,7 @@ files_in_r_to_run <-
     "03_preprocessing_data.Rmd",
     "04_estimating_parameters.Rmd",
     "05_inference_and_simulation.Rmd",
-    "11_simulation study.Rmd")
+    "11_simulation_study.Rmd")
 
 for(i1 in 1:length(files_in_r_to_run)){
   

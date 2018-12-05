@@ -461,7 +461,7 @@ ggsave(filename=here("results","wetlength.pdf"),device='pdf', plot=w.p.cons,widt
 ```
 
 ```{r,eval=FALSE}
-pdf("condidry.pdf",width=10, height=5)
+pdf("../results/condidry.pdf",width=10, height=5)
 par(mfrow=c(1,2))
 plot(density(condi.prob[3,]),main='Wet|Dry',xlab="Transition probability",xlim=c(0,0.5),lwd=2,col=2)
 lines(density(condi.prob.norm[3,]),col=3,lwd=2,lty=2)
