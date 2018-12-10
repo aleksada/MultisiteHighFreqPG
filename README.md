@@ -56,7 +56,7 @@ One can also run the scripts one by one by following the steps below. All of the
 ### License
 
 - For academic and non-commercial use only.
-- For commercial use, please contact yuxiao.li@kaust.edu.sa
+- For commercial use, please contact ying.sun@kaust.edu.sa or yuxiao.li@kaust.edu.sa
 
 ### Poster
 
