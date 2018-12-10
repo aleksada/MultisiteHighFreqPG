@@ -1,6 +1,0 @@
-"0","results.VAR1 <- list(sigma21 = cov.sigma21, beta1 = cov.beta1, alpha = cov.alpha,b0 = cov.b0,b1 = cov.b1,ut = ut,interval = back.trans.interval)"
-"0","save(results.VAR1,"
-"0","     file = here(""results"", ""estimation.cov.VAR1.RData""))"
-"0","results.VAR1.norm <- list(sigma21 = cov.sigma21.norm, beta1 = cov.beta1.norm, b0 = cov.b0.norm,b1 = cov.b1.norm, ut=ut, interval = back.trans.interval.norm)"
-"0","save(results.VAR1.norm,"
-"0","     file = here(""results"", ""estimation.cov.VAR1.norm.RData""))"

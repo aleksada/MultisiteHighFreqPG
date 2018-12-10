@@ -7,6 +7,10 @@ output:
     toc: true
 ---
 
+```{r,echo = FALSE}
+start_time <- Sys.time()
+```
+
 # Overview
 
 The three raw datasets we're working with all contain 
@@ -79,7 +83,7 @@ we only focus on the raw dataset
 Look at the first 5 rows, we notice that all values are zero. 
 It motivates us to see how many zeros and the distribution of the dataset.
 
-```{r check_distribution}
+```{r check_distribution, eval = FALSE}
 par(mfrow=c(2,4))
 for(i in 1: 8) hist(rain1_table[,i + 1])
 table(rain1_table[,2])/28801
@@ -116,3 +120,12 @@ dist(coord)
 These dataset only includes 9 rows and 3 columns. 
 It is safe the report everything. The actually locations are shown in the figure 1
 and we calculate the Euclidean distance, although maybe not precise.
+
+## Running Time
+```{r, echo = FALSE}
+end_time <- Sys.time()
+
+runtime_02 <- end_time-start_time
+
+runtime_02
+```

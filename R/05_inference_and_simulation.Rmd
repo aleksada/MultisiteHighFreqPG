@@ -11,6 +11,11 @@ output:
     code_folding: hide
 ---
 
+```{r, echo = FALSE}
+start_time <- Sys.time()
+```
+
+
 # Overview
 This file contains the code for inference and reproducing rainfall data. Most of results shown in the paper can be found here.
 
@@ -122,7 +127,7 @@ for(t in 2: NT){
 
 ##Skew t
 
-```{r qqplot Skew t}
+```{r qqplot Skew t, eval=FALSE}
 par(mfrow=c(3,3))
 for (i in 1:8){
     plot.ts(raindata[,i], 
@@ -136,7 +141,7 @@ for (i in 1:8){
 ```
 
 ##Gaussian
-```{r qqplot gaussian}
+```{r qqplot gaussian,eval=FALSE}
 par(mfrow=c(3,3))
 for (i in 1:8){
     plot.ts(raindata[,i], 
@@ -150,7 +155,7 @@ for (i in 1:8){
 ```
 
 ##ggplot
-```{r skew-t sims}
+```{r skew-t sims,eval=FALSE}
 rain.sims <- rain.long[-(1:8)*28801,]
 rain.sims$rain1 <- melt(y.st)$value
 rain.sim.plot<-ggplot(rain.sims,aes(x=dt,group=sites))+
@@ -162,7 +167,7 @@ rain.sim.plot<-ggplot(rain.sims,aes(x=dt,group=sites))+
 rain.sim.plot
 ```
 
-```{r Gaussian sims}
+```{r Gaussian sims,eval=FALSE}
 rain.sims <- rain.long[-(1:8)*28801,]
 rain.sims$rain1 <- melt(y.norm)$value
 rain.sim.plot.norm<-ggplot(rain.sims,aes(x=dt,group=sites))+
@@ -243,7 +248,7 @@ set.seed(4)
 niters<-50
 app.sim <- nsims.app(NT,NS,sigma21.st,beta1.st,b0.st,b1.st,
                   alpha,4,niters,raindata)
-app.sim.norm<-nsims.app.norm(NT,NS,sigma21.norm,beta1.norm,b0.norm,b1.norm,
+app.sim.norm <- nsims.app.norm(NT,NS,sigma21.norm,beta1.norm,b0.norm,b1.norm,
                   niters,raindata)
 ```
 
@@ -253,11 +258,11 @@ app.sim.norm<-nsims.app.norm(NT,NS,sigma21.norm,beta1.norm,b0.norm,b1.norm,
 ```{r}
 rmse.app<-rmse.app.norm<-c()
 for(i in 1:niters){
-  rmse.app[i]<-sqrt(mean((app.sim[,,i]-raindata)^2))
+  rmse.app[i] <- sqrt(mean((app.sim[,,i]-raindata)^2))
   rmse.app.norm[i]<-sqrt(mean((app.sim.norm[,,i]-raindata)^2))
 }
-mrmse.app<-mean(rmse.app)*100
-mrmse.app.norm<-mean(rmse.app.norm)*100
+mrmse.app <- mean(rmse.app) * 100
+mrmse.app.norm <- mean(rmse.app.norm) * 100
 ```
 
 ##Quantile
@@ -268,7 +273,7 @@ for (j in 1 :niters){
    quan.app.norm[j,]<- quantile(app.sim.norm[,,j],1:10000/10000) 
    quan.app.true<- quantile(raindata,1:10000/10000) 
 }
-quan.df.app<-data.frame(x=rep(quan.app.true,3),median=c(apply(quan.app,2,sort)[26,],apply(quan.app.norm,2,sort)[26,],quan.app.true),lower=c(apply(quan.app,2,sort)[2,],apply(quan.app.norm,2,sort)[2,],rep(NA,10000)),upper=c(apply(quan.app,2,sort)[49,],apply(quan.app.norm,2,sort)[49,],rep(NA,10000)),Type=c(rep("Skew-t",10000),rep("Gaussian",10000),rep("Truth",10000)))
+quan.df.app <- data.frame(x=rep(quan.app.true,3),median=c(apply(quan.app,2,sort)[26,],apply(quan.app.norm,2,sort)[26,],quan.app.true),lower=c(apply(quan.app,2,sort)[2,],apply(quan.app.norm,2,sort)[2,],rep(NA,10000)),upper=c(apply(quan.app,2,sort)[49,],apply(quan.app.norm,2,sort)[49,],rep(NA,10000)),Type=c(rep("Skew-t",10000),rep("Gaussian",10000),rep("Truth",10000)))
 
 ```
 
@@ -293,19 +298,24 @@ spat.dep <- melt(data.frame(Truth=simutan.true,"Skew-t" = simutan))
 
 ##Dry spell length
 ```{r}
-cons<-rle(c(raindata))
-mattovec<-apply(app.sim,3,c)
-mattovec.norm<-apply(app.sim.norm,3,c)
-cons2<-apply(mattovec,2,rle)
-cons2.norm<-apply(mattovec.norm,2,rle)
+cons <- rle(c(raindata))
+mattovec <- apply(app.sim,3,c)
+mattovec.norm <- apply(app.sim.norm,3,c)
+cons2 <- apply(mattovec,2,rle)
+cons2.norm <- apply(mattovec.norm,2,rle)
 
-quan.cons<-quan.cons.norm<-matrix(0,niters,10000)
+quan.cons <- quan.cons.norm<-matrix(0,niters,10000)
 for (j in 1 :niters){
-   quan.cons[j,]<- quantile(cons2[[j]]$length[cons2[[j]]$values==0],1:10000/10000,type = 6) 
-   #quan.cons.norm[j,]<-quantile(cons2.norm[[j]]$length[cons2.norm[[j]]$values==0],1:10000/10000,type = 6)
-   quan.cons.true<- quantile(cons$length[cons$values==0],1:10000/10000,type = 6) 
+   quan.cons[j,] <- quantile(cons2[[j]]$length[cons2[[j]]$values==0],
+                             1:10000/10000,type = 6) 
+   quan.cons.true <- quantile(cons$length[cons$values==0],
+                              1:10000/10000,type = 6) 
 }
-quan.cons<-data.frame(x=rep(quan.cons.true,2),median=c(apply(quan.cons,2,sort)[26,],quan.cons.true),lower=c(apply(quan.cons,2,sort)[2,],rep(NA,10000)),upper=c(apply(quan.cons,2,sort)[49,],rep(NA,10000)),Type=c(rep("Skew-t",10000),rep("Truth",10000)))
+quan.cons <- data.frame(x = rep(quan.cons.true,2),
+                        median = c(apply(quan.cons,2,sort)[26,],quan.cons.true),
+                        lower=c(apply(quan.cons,2,sort)[2,],rep(NA,10000)),
+                        upper=c(apply(quan.cons,2,sort)[49,],rep(NA,10000)),
+                        Type=c(rep("Skew-t",10000),rep("Truth",10000)))
 
 ```
 
@@ -320,33 +330,39 @@ w.cons2.norm<-apply(w.mattovec.norm,2,rle)
 
 w.quan.cons<-w.quan.cons.norm<-matrix(0,niters,10000)
 for (j in 1 :niters){
-   w.quan.cons[j,]<- quantile(w.cons2[[j]]$length[w.cons2[[j]]$values==TRUE],1:10000/10000,type = 6) 
-   w.quan.cons.norm[j,]<-quantile(w.cons2.norm[[j]]$length[w.cons2.norm[[j]]$values==TRUE],1:10000/10000,type = 6)
-   w.quan.cons.true<- quantile(w.cons$length[w.cons$values==TRUE],1:10000/10000,type = 6) 
+    w.quan.cons[j,] <- quantile(w.cons2[[j]]$length[w.cons2[[j]]$values==TRUE],
+                                1:10000/10000,type = 6) 
+    w.quan.cons.norm[j,] <- quantile(w.cons2.norm[[j]]$length[w.cons2.norm[[j]]$values==TRUE],
+                                     1:10000/10000,type = 6)
+    w.quan.cons.true <- quantile(w.cons$length[w.cons$values==TRUE],
+                                 1:10000/10000,type = 6) 
 }
-w.quan.cons<-data.frame(x=rep(w.quan.cons.true,2),median=c(apply(w.quan.cons,2,sort)[26,],w.quan.cons.true),lower=c(apply(w.quan.cons,2,sort)[2,],rep(NA,10000)),upper=c(apply(w.quan.cons,2,sort)[49,],rep(NA,10000)),Type=c(rep("Skew-t",10000),rep("Truth",10000)))
+w.quan.cons <- data.frame(x=rep(w.quan.cons.true,2),
+                          median=c(apply(w.quan.cons,2,sort)[26,],w.quan.cons.true),
+                          lower=c(apply(w.quan.cons,2,sort)[2,],rep(NA,10000)),
+                          upper=c(apply(w.quan.cons,2,sort)[49,],rep(NA,10000)),
+                          Type=c(rep("Skew-t",10000),rep("Truth",10000)))
 
 ```
 
 
 ##Conditional probability
 ```{r}
-condi.prob<-condi.prob.norm<-matrix(0,3,50)
+condi.prob <- condi.prob.norm<-matrix(0,3,50)
 for(i in 1:50){
-condi.prob[,i]<-table((app.sim[-1,,i]>0)-(app.sim[-NT,,i]>0))/(NT*NS)
-#condi.prob.norm[,i]<-table((app.sim.norm[-1,,i]>0)-(app.sim.norm[-NT,,i]>0))/(NT*NS)
+condi.prob[,i] <- table((app.sim[-1,,i]>0) - (app.sim[-NT,,i]>0))/(NT*NS)
 }
-condi.prob.real<-table((raindata[-1,]>0)-(raindata[-NT,]>0))/(NT*NS)
+condi.prob.real <- table((raindata[-1,]>0)-(raindata[-NT,]>0))/(NT*NS)
 
-wcd<-apply(condi.prob,1,mean)[3]
-dcd<-1-apply(condi.prob,1,mean)[3]
-wcw<-1-apply(condi.prob,1,mean)[1]
-dcw<-apply(condi.prob,1,mean)[1]
+wcd <- apply(condi.prob,1,mean)[3]
+dcd <- 1-apply(condi.prob,1,mean)[3]
+wcw <- 1-apply(condi.prob,1,mean)[1]
+dcw <- apply(condi.prob,1,mean)[1]
 round(c(wcw,dcw,wcd,dcd),3)
-wcd.r<-apply(condi.prob.real,1,mean)[3]
-dcd.r<-1-apply(condi.prob.real,1,mean)[3]
-wcw.r<-1-apply(condi.prob.real,1,mean)[1]
-dcw.r<-apply(condi.prob.real,1,mean)[1]
+wcd.r <- apply(condi.prob.real,1,mean)[3]
+dcd.r <- 1-apply(condi.prob.real,1,mean)[3]
+wcw.r <- 1-apply(condi.prob.real,1,mean)[1]
+dcw.r <- apply(condi.prob.real,1,mean)[1]
 round(c(wcw.r,dcw.r,wcd.r,dcd.r),3)
 ```
 
@@ -361,7 +377,6 @@ p1 <- ggplot(data = quan.df.app, aes(x=x, y=median, colour=Type)) +
     geom_ribbon(aes(ymin=lower, ymax=upper,fill=Type), linetype=2, alpha=0.3) + 
     scale_color_brewer(palette = "Dark2") +    
     scale_fill_brewer(palette = "Dark2")
-p1
 ```
 
 ##Simutaneous rain
@@ -372,7 +387,6 @@ p2 <- ggplot(spat.dep,aes(group=variable,fill=variable)) +
         xlab("Number of simutaneously rainy locations")+
         ylab("Count")+
         ggtitle("Histogram of Simultaneous Rain")
-p2
 
 ```
 
@@ -385,7 +399,6 @@ p.cons <- ggplot(data = quan.cons, aes(x=x, y=median, colour=Type)) +
     geom_ribbon(aes(ymin=lower, ymax=upper,fill=Type), linetype=2, alpha=0.3) + 
     scale_color_brewer(palette = "Dark2") +    
     scale_fill_brewer(palette = "Dark2")
-p.cons
 
 ```
 
@@ -397,8 +410,6 @@ w.p.cons <- ggplot(data = w.quan.cons, aes(x=x, y=median, colour=Type)) +
     geom_ribbon(aes(ymin=lower, ymax=upper,fill=Type), linetype=2, alpha=0.3) + 
     scale_color_brewer(palette = "Dark2") +    
     scale_fill_brewer(palette = "Dark2")
-w.p.cons
-
 ```
 
 ## Distriburion table
@@ -416,14 +427,16 @@ tab2
 
 ##Conditional probability
 
-```{r}
+```{r,eval = FALSE}
 par(mfrow=c(1,2))
-plot(density(condi.prob[3,]),main='Wet|Dry',xlab="Transition probability",xlim=c(0,0.5),lwd=2,col=2)
+plot(density(condi.prob[3,]),main='Wet|Dry',
+     xlab="Transition probability",xlim=c(0,0.5),lwd=2,col=2)
 lines(density(condi.prob.norm[3,]),col=3,lwd=2,lty=2)
 abline(v=condi.prob.real[3],col=1,lwd=2,lty=2)
 legend("topright",c("Truth","Skew-t","Gaussian"),col=c(1,2,3),lwd=2)
 
-plot(density(1-condi.prob[1,]),main='Wet|Wet',xlab="Transition probability",xlim=c(0.5,1),lwd=2,col=2)
+plot(density(1-condi.prob[1,]),main='Wet|Wet',
+     xlab="Transition probability",xlim=c(0.5,1),lwd=2,col=2)
 lines(density(1-condi.prob.norm[1,]),col=3,lwd=2,lty=2)
 abline(v=1-condi.prob.real[1],col=1,lwd=2,lty=2)
 legend("topleft",c("Truth","Skew-t","Gaussian"),col=c(1,2,3),lwd=2)
@@ -473,4 +486,13 @@ lines(density(1-condi.prob.norm[1,]),col=3,lwd=2,lty=2)
 abline(v=1-condi.prob.real[1],col=1,lwd=2,lty=2)
 legend("topleft",c("Truth","Skew-t","Gaussian"),col=c(1,2,3),lwd=2,lty=c(2,1,1))
 dev.off()
+```
+
+## Running time
+```{r, echo = FALSE}
+end_time <- Sys.time()
+
+runtime_05 <- end_time-start_time
+
+runtime_05
 ```

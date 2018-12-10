@@ -9,6 +9,7 @@
 #' datasets we want to use (RaindataPerepoch, RaindataPerehour, and coord) 
 #' from various repositories on the web, and collecting
 #' them in data/.
+start_time <- Sys.time()
 
 library(here)
 library(downloader)
@@ -71,3 +72,9 @@ for(i1 in 1:length(data_file_list)){
   }
 }
 
+end_time <- Sys.time()
+
+runtime_01 <- end_time-start_time
+
+##Running Time
+runtime_01

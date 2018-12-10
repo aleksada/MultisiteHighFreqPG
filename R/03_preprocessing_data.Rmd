@@ -5,6 +5,10 @@ date: "`r Sys.Date()`"
 output: github_document
 ---
 
+```{r, echo = FALSE}
+start_time <- Sys.time()
+```
+
 # Outline
 
 We want to organize the dataset, RaindataPerepoch.csv,
@@ -51,7 +55,7 @@ ggsave(filename=here("results","rainraw.pdf"), plot=rainraw, width = 11, height 
 
 ```{r histogram}
 histraw <- ggplot(rain.long,aes(rain))+geom_histogram(binwidth=.5)+ scale_y_sqrt() + xlab("Rainfall Amount") + ylab("Frequency") + ggtitle("(a) Histograms of the Rainfall Data")
-histraw 
+#histraw 
 ggsave(filename=here("results","histraw.pdf"), plot=histraw, width = 6, height = 5)
 ```
 
@@ -59,8 +63,8 @@ ggsave(filename=here("results","histraw.pdf"), plot=histraw, width = 6, height =
 qqraw <- ggplot(rain.long, aes(sample=rain))+ stat_qq()+geom_abline(slope=1, intercept=0) +
     xlab("Theoretical") + ylab("Sample") +
     ggtitle("(b) Normal QQ Plot of the Rainfall Data")
-qqraw
-ggsave(filename=here("results","qqraw.pdf"), plot=qqraw, width = 6, height = 5)
+#qqraw
+ggsave(filename=here("results","qqraw.jpg"), plot=qqraw, width = 6, height = 5)
 ```
 
 ```{r distributional table}
@@ -69,8 +73,8 @@ table(unlist(rain.raw[-28801,2:9])) ##The last point was removed to get 10-day d
 
 
 
-##Minutely Data
-```{r 1 Minute Data}
+##Minutely Data-not run
+```{r 1 Minute Data, eval=FALSE}
 minutemean <- rain.long[,2:5] %>% group_by(G=trunc(2:(n()+1)/2))
 rain.1min <- tapply(minutemean$rain,minutemean$G,sum)
 rain.1min.df <- data.frame(dt = rain.long$dt[seq(1,dim(rain.long)[1],by=2)],sites = rain.long$sites[seq(1,dim(rain.long)[1],by=2)],rain = rain.1min)
@@ -79,8 +83,8 @@ ggplot(rain.1min.df,aes(y=rain,x=dt,group=sites,colour=sites))+
     geom_line()+facet_grid(sites ~ .) + xlab("Data and Time") + ylab("Rainfall Amount")
 ```
 
-##15-Minute Data
-```{r 15 Minute Data}
+##15-Minute Data-not run
+```{r 15 Minute Data, eval=FALSE}
 minute15mean <- rain.long[,2:5] %>% group_by(G=trunc(30:(n()+29)/30))
 rain.15min <- tapply(minute15mean$rain,minute15mean$G,sum)
 rain.15min.df <- data.frame(dt = rain.long$dt[seq(1,dim(rain.long)[1],by=30)],sites = rain.long$sites[seq(1,dim(rain.long)[1],by=30)],rain = rain.15min)
@@ -90,8 +94,8 @@ ggplot(rain.15min.df,aes(y=rain,x=dt,group=sites,colour=sites))+
 ```
 
 
-##Hourly Data
-```{r Hourly Data}
+##Hourly Data-not run
+```{r Hourly Data, eval=FALSE}
 hourmean <- rain.long[,2:5] %>% group_by(G=trunc(120:(n()+119)/120))
 rain.hour <- tapply(hourmean$rain,hourmean$G,sum)
 rain.hour.df <- data.frame(dt = rain.long$dt[seq(1,dim(rain.long)[1],by=120)],sites = rain.long$sites[seq(1,dim(rain.long)[1],by=120)],rain = rain.hour)
@@ -104,7 +108,17 @@ ggplot(rain.hour.df,aes(y=rain,x=dt,group=sites,colour=sites))+
 
 ```{r save the file}
 save(rain.long, file=here("results", "rain.long.RData"))
-save(rain.1min.df, file=here("results", "rain.1min.df.RData"))
-save(rain.15min.df, file=here("results", "rain.15min.df.RData"))
-save(rain.hour.df, file=here("results", "rain.hour.df.RData"))
+#save(rain.1min.df, file=here("results", "rain.1min.df.RData"))
+#save(rain.15min.df, file=here("results", "rain.15min.df.RData"))
+#save(rain.hour.df, file=here("results", "rain.hour.df.RData"))
+```
+
+## Running Time
+
+```{r, echo = FALSE}
+end_time <- Sys.time()
+
+runtime_03 <- end_time-start_time
+
+runtime_03
 ```

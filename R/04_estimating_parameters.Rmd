@@ -5,6 +5,11 @@ date: "`r Sys.Date()`"
 output: github_document
 ---
 
+```{r, echo = FALSE}
+start_time <- Sys.time()
+```
+
+
 # Overview
 This file contains the procedure of estimating parameters by maximizing the log-likelihood function using the skew-t model and Gaussian model. The function to optimize for our model is called "varlik.sp.var1.st", and it will be called repeatly after that. The function to optimize for Gaussian model is called "varlik.sp.var1.norm".
 
@@ -57,12 +62,11 @@ sep <- 1
 varlik.sp.var1.st <- function(params, data, coord, ut, nu){
     NS <- ncol(data)
     NT <- nrow(data)
-    #sigma21 <- exp(params[1])
     sigma21 <- exp(params[1])/(1+exp(params[1]))  # The variance parameter B1
     beta1 <- exp(params[2])    # The spatial range parameter B1
     b0 <- exp(params[3])
     b1 <- exp(params[4])
-    alpha <- exp(params[5])
+    alpha <- exp(params[5]) #Skewness parameter
     nu <- nu ## Degree of freedom
     # Compute the variograms under the model
     dist <- matrix(0, NS, NS) # The distances between locations
@@ -79,6 +83,8 @@ varlik.sp.var1.st <- function(params, data, coord, ut, nu){
       #  return(1e16)
        # }
     sigt_plus <- b0 + b1 * apply(data,1,mean)
+    
+    ##Construct the likelihood function
     sum.lik <- 0
     data.lag1 <- data[-1,]
     for (s in 1:NS){
@@ -92,9 +98,9 @@ varlik.sp.var1.st <- function(params, data, coord, ut, nu){
          alpha/sqrt(1 + alpha^2)
         omega <- 1/sqrt((nu/(nu-2) - bvdelta^2))
         xi<- -omega * bvdelta
-        part1 <- dst(x, xi, omega, alpha, nu, log=TRUE)
-        part2 <- log(sigt_plus[index.posi])
-        part3 <- log(pst(u, xi, omega, alpha, nu))
+        part1 <- dst(x, xi, omega, alpha, nu, log=TRUE) #First term
+        part2 <- log(sigt_plus[index.posi]) #Second term
+        part3 <- log(pst(u, xi, omega, alpha, nu)) #Third term
         sum.lik <- sum.lik + sum(part1) - sum(part2) + sum(part3)
     }
         #message(c(sigma21,beta1,alpha,b0,b1))
@@ -151,7 +157,7 @@ ut.fun <- function(data,sep){
     binaryrain <- data > 0
     NT <- length(binaryrain)
     t <- (1:NT)-1
-    ht <- floor(94.5 + sep*t/(2 * 60 * 24))
+    ht <- floor(94.5 + sep * t/(2 * 60 * 24))
     H <- 10
     sint<- matrix(0, length(t), H)
     cost<- matrix(0, length(t), H)
@@ -159,11 +165,11 @@ ut.fun <- function(data,sep){
     for(i in 1:H){
     sint[,i] <- sin(2 * i * pi * ht/365)
     cost[,i] <- cos(2 * i * pi * ht/365)
-    season.fit <- glm(binaryrain ~ sint[,1:i] + cost[,1:i],family = "binomial")
+    season.fit <- glm(binaryrain ~ sint[,1:i],family = "binomial")
     save.aic[i] <- AIC(season.fit)
 }
 H.best <- which(save.aic == min(save.aic))
-season.fit.best <- glm(binaryrain ~ sint[,1:H.best] + cost[,1:H.best], family="binomial")
+season.fit.best <- glm(binaryrain ~ sint[,1:H.best], family="binomial")
 fitted <- season.fit.best$fitted
 
 ut <- quantile(data, 1 - fitted)
@@ -176,7 +182,7 @@ return(ut)
 
 ##Fit ut 
 
-```{r ut fit}
+```{r ut fit,warning=FALSE}
 ut <- matrix(0,nrow(raindata),ncol(raindata))
 for (i in 1: ncol(raindata)){
 ut[,i] <- ut.fun(raindata[,i],sep=sep)
@@ -198,7 +204,7 @@ ggsave(filename=here("results","ut.pdf"), plot=utfit, width = 11, height = 9)
 ```
 
 ##Optimization nu
->This process requires several hours to run, so we do not run it in default.
+This process requires several hours to run, so we do not run it in default.
 
 ```{r optimize nu, eval=FALSE}
 va<-c()
@@ -314,4 +320,13 @@ save(results.VAR1,
 results.VAR1.norm <- list(sigma21 = cov.sigma21.norm, beta1 = cov.beta1.norm, b0 = cov.b0.norm,b1 = cov.b1.norm, ut=ut, interval = back.trans.interval.norm)
 save(results.VAR1.norm,
      file = here("results", "estimation.cov.VAR1.norm.RData"))
+```
+
+## Running time
+```{r, echo = FALSE}
+end_time <- Sys.time()
+
+runtime_04 <- end_time-start_time
+
+runtime_04
 ```

@@ -1,6 +1,0 @@
-"0","dp.true<-sum(true.sim[,,2]==0)/length(true.sim[,,2])"
-"0","dp.st<-dp.norm<-c()"
-"0","for(i in 1: niters) {"
-"0","    dp.st[i]<-sum(est.sim[,,i,2]==0)/length(est.sim[,,i,2])"
-"0","    dp.norm[i]<-sum(est.sim.norm[,,i,2]==0)/length(est.sim.norm[,,i,2])"
-"0","}"

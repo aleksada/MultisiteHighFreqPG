@@ -1,5 +1,0 @@
-"0","pdf(""vis_b0_b1.pdf"",width=8, height=6)"
-"0","par(mfrow=c(3,2),mar=c(1.5,4,1,1),mgp=c(1.5,0.5,0))"
-"0","plot.ts(y.sim.vis2[,1], ylim=c(0,max(y.sim.vis)),"
-"0","        ylab = expression(paste(b[1],""=0.2"")),"
-"0","        main = expression(paste(b[0],""=0.5"")))"

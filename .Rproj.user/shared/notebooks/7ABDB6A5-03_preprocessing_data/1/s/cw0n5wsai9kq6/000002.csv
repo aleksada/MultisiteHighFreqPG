@@ -1,7 +1,0 @@
-"0","rain.raw <- read.csv(here(""data"",""RaindataPerepoch.csv""))"
-"0","rain.long <- melt(rain.raw[,1:9], id=c(""date...time""))"
-"0","rain.long <- data.frame(rain.long)"
-"0","names(rain.long)<-c(""dt"",""sites"",""rain"")"
-"0","rain.long$dt <- as.POSIXct(strptime(rain.long$dt,format=""%d.%m.%Y  %H:%M:%S""))"
-"0","rain.long$Date <- as.Date(rain.long$dt)"
-"0","rain.long$Time <- format((rain.long$dt) ,format = ""%H:%M:%S"")"
