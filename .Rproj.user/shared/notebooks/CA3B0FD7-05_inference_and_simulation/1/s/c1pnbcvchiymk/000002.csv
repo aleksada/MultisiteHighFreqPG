@@ -1,8 +1,0 @@
-"0","rain.sims <- rain.long[-(1:8)*28801,]"
-"0","rain.sims$rain1 <- melt(y.st)$value"
-"0","rain.sim.plot<-ggplot(rain.sims,aes(x=dt,group=sites))+"
-"0","    geom_line(aes(y = rain,color='Observation'),alpha=0.6)+"
-"0","     geom_line(aes(y = rain1,color='Simulation'),alpha=0.6) + "
-"0","        facet_grid(sites ~ .) + xlab(""Data and Time"") + ylab(""Amount of Rain"")+"
-"0","    ggtitle(""(a) Simulation vs Observation"" )"
-"0","rain.sim.plot"

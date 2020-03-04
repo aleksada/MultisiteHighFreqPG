@@ -34,6 +34,7 @@ library(here)
 library(sn)
 library(geoR)
 library(reshape2)
+library(nloptr)
 ```
 
 ## Data
@@ -42,15 +43,18 @@ library(reshape2)
 
 ```{r load_data}
 
-load(here("results", "rain.long.RData"))
-raindata <- matrix(rain.long$rain[1:230400],28800,8)
-sep <- 1
+#load(here("results", "rain.long.RData"))
+#sep <- 1
+#raindata <- matrix(rain.long$rain[1:230400],28800,8)
+
 #load(here("results", "rain.1min.df.RData"))
-#raindata <- matrix(rain.1min.df$rain[1:115200],14400,8)
 #sep <- 2
-#load(here("results", "rain.15min.df.RData"))
-#raindata <- matrix(rain.15min.df$rain[1:7680],960,8)
-#sep <- 30
+#raindata <- matrix(rain.1min.df$rain[1:115200],14400,8)
+
+load(here("results", "rain.15min.df.RData"))
+sep <- 30
+raindata <- matrix(rain.15min.df$rain[1:7680],960,8)
+
 ##load(here("results", "rain.hour.df.RData"))
 #raindata <- matrix(rain.hour.df$rain[1:1920],240,8)
 #sep <- 120
@@ -62,28 +66,17 @@ sep <- 1
 varlik.sp.var1.st <- function(params, data, coord, ut, nu){
     NS <- ncol(data)
     NT <- nrow(data)
-    sigma21 <- exp(params[1])/(1+exp(params[1]))  # The variance parameter B1
-    beta1 <- exp(params[2])    # The spatial range parameter B1
-    b0 <- exp(params[3])
-    b1 <- exp(params[4])
-    alpha <- exp(params[5]) #Skewness parameter
+    sigma21 <- params[1]  # The variance parameter B1
+    beta1 <- params[2]    # The spatial range parameter B1
+    b0 <- params[3]
+    b1 <- params[4]
+    alpha <- params[5] #Skewness parameter
     nu <- nu ## Degree of freedom
     # Compute the variograms under the model
-    dist <- matrix(0, NS, NS) # The distances between locations
-    for (i in 1:NS) {
-        for (j in 1:NS) {
-            dist[i,j] <- 
-                sqrt((coord[i,2]-coord[j,2])^2+(coord[i,3]-coord[j,3])^2)
-        }
-    }
+    distance <- as.matrix(dist(coord[,2:3], diag = TRUE, upper = TRUE))
     # The covariance matrix under model with nugget effect
-    B1 <- sigma21 * matern(dist,beta1,1)
-    #if(eigen(B1)$values[1] >= 0.99) {
-     #   warning("The process is not stationary, return -1e16")
-      #  return(1e16)
-       # }
+    B1 <- sigma21 ^ 2 * exp(- (distance/beta1)^2)
     sigt_plus <- b0 + b1 * apply(data,1,mean)
-    
     ##Construct the likelihood function
     sum.lik <- 0
     data.lag1 <- data[-1,]
@@ -115,20 +108,14 @@ varlik.sp.var1.norm <- function(params, data, coord, ut){
     NS <- ncol(data)
     NT <- nrow(data)
     #sigma21 <- exp(params[1])
-    sigma21 <- exp(params[1])/(1+exp(params[1]))  # The variance parameter B1
-    beta1 <- exp(params[2])    # The spatial range parameter B1
-    b0 <- exp(params[3])
-    b1 <- exp(params[4])
+    sigma21 <- params[1]  # The variance parameter B1
+    beta1 <- params[2]    # The spatial range parameter B1
+    b0 <- params[3]
+    b1 <- params[4]
     # Compute the variograms under the model
-    dist <- matrix(0, NS, NS) # The distances between locations
-    for (i in 1:NS) {
-        for (j in 1:NS) {
-            dist[i,j] <- 
-                sqrt((coord[i,2]-coord[j,2])^2+(coord[i,3]-coord[j,3])^2)
-        }
-    }
+    distance <- as.matrix(dist(coord[,2:3], diag = TRUE, upper = TRUE))
     # The covariance matrix under model with nugget effect
-    B1 <- sigma21 * geoR::matern(dist,beta1,1)
+    B1 <- sigma21^2 * exp(- (distance/beta1)^2)
     sigt_plus <- b0 + b1 * apply(data,1,mean)
     sum.lik <- 0
     data.lag1 <- data[-1,]
@@ -157,19 +144,26 @@ ut.fun <- function(data,sep){
     binaryrain <- data > 0
     NT <- length(binaryrain)
     t <- (1:NT)-1
-    ht <- floor(94.5 + sep * t/(2 * 60 * 24))
+    ht <- floor(sep * t/(2 * 60))%%24
+    dt <- floor(sep * t/(2 * 60 * 24))
     H <- 10
     sint<- matrix(0, length(t), H)
     cost<- matrix(0, length(t), H)
+    sindt<- matrix(0, length(t), H)
+    cosdt<- matrix(0, length(t), H)
     save.aic <- rep(0,H)
     for(i in 1:H){
-    sint[,i] <- sin(2 * i * pi * ht/365)
-    cost[,i] <- cos(2 * i * pi * ht/365)
-    season.fit <- glm(binaryrain ~ sint[,1:i],family = "binomial")
+    sint[,i] <- sin(2 * i * pi * ht/24)
+    cost[,i] <- cos(2 * i * pi * ht/24)
+    sindt[,i] <- sin(2 * i * pi * dt/365)
+    cosdt[,i] <- cos(2 * i * pi * dt/365)
+    season.fit <- glm(binaryrain ~ sint[,1:i] + cost[,1:i] + 
+                          sindt[,1:i] + cosdt[,1:i],family = "binomial")
     save.aic[i] <- AIC(season.fit)
 }
 H.best <- which(save.aic == min(save.aic))
-season.fit.best <- glm(binaryrain ~ sint[,1:H.best], family="binomial")
+season.fit.best <- glm(binaryrain ~ sint[,1:H.best] + cost[,1:H.best] + 
+                           sindt[,1:H.best] + cosdt[,1:H.best], family="binomial")
 fitted <- season.fit.best$fitted
 
 ut <- quantile(data, 1 - fitted)
@@ -194,13 +188,14 @@ ut <- ifelse(ut>1,ut,1)
 ##Plot fitted ut and save the plot
 
 ```{r ut plot}
-rain.ut <- rain.long[-(1:8)*28801,]
+#rain.ut <- rain.long[1:230400,]
+rain.ut <- rain.15min.df[1:7680,]
+#rain.ut <- rain.1min.df[1:115200,]
 rain.ut$rain <- melt(ut)$value
 utfit<-ggplot(rain.ut,aes(y=rain,x=dt,group=sites,colour=sites))+
     geom_line()+facet_grid(sites ~ .) + xlab("Data and Time") + 
-    ylab("Rainfall Amount (count/epoch)") + 
-    ggtitle("Fitted cutoffs with seasonality at eight locations")
-ggsave(filename=here("results","ut.pdf"), plot=utfit, width = 11, height = 9)
+    ylab("Rainfall Amount (count/epoch)")
+ggsave(filename=here("results","ut_15min.pdf"), plot=utfit, width = 11, height = 9)
 ```
 
 ##Optimization nu
@@ -213,15 +208,14 @@ NT <- nrow(raindata)
 NS <- ncol(raindata)
 
 init <- c()
-#init[1] <- 0.1/(1/NS-0.1) #variance
 init[1] <- 0.1
 init[2] <- 1 #spatial range
 init[3] <- 0.5
 init[4] <- 0.5
-init[5] <- 1 #positive skewness alpha from exploratory analysis
-init <- log(init)
-cov.optim.rslt.st <- optim(par=init,fn = varlik.sp.var1.st,method = "CG",
-                    data = raindata, coord = coord, ut = ut, nu = i+2)
+init[5] <- 2 #positive skewness alpha from exploratory analysis
+cov.optim.rslt.st <- bobyqa(x0=init,fn = varlik.sp.var1.st,
+                            lower = c(0,0,0,0,-10),upper = rep(10,5),
+                            data = raindata, coord = coord, ut = ut, nu = i+2)
 va[i]<-cov.optim.rslt.st$value
 }
 nu.best<-which.min(va)+2
@@ -235,13 +229,16 @@ init <- c()
 #init[1] <- 0.1/(1/NS-0.1) #variance
 init[1] <- 0.1
 init[2] <- 1 #spatial range
-init[3] <- .5
-init[4] <- .5
-init[5] <- 1 #positive skewness alpha
-init <- log(init)
-cov.optim.rslt.st <- optim(par=init,fn = varlik.sp.var1.st,
-                    data = raindata, coord = coord, ut = ut, nu = 4, 
-                    hessian = TRUE)
+init[3] <- 1
+init[4] <- 1
+init[5] <- 10 #positive skewness alpha
+#cov.optim.rslt.st <- optim(par=init,fn = varlik.sp.var1.st,
+#                    data = raindata, coord = coord, ut = ut, nu = 4, 
+#                    hessian = TRUE)
+nu.best <- 7
+cov.optim.rslt.st <- neldermead(x0=init,fn = varlik.sp.var1.st,
+                            lower = c(0,0,0,0,-10),upper = c(sqrt(1/8),10,10,10,100),
+                            data = raindata, coord = coord, ut = ut, nu = nu.best)
 ```
 
 
@@ -251,14 +248,13 @@ NS <- ncol(raindata)
 
 init <- c()
 #init[1] <- 0.1/(1/NS-0.1) #variance
-init[1] <- 0.1
-init[2] <- 1 #spatial range
-init[3] <- 0.5
-init[4] <- 0.5
-init<-log(init)
-cov.optim.rslt.norm <- optim(par = init,fn = varlik.sp.var1.norm,
-                    data = raindata, coord = coord, ut = ut, 
-                    hessian = TRUE)
+init[1] <- 0.3
+init[2] <- 0.2 #spatial range
+init[3] <- 1
+init[4] <- 1
+cov.optim.rslt.norm <- neldermead(x0=init,fn = varlik.sp.var1.norm,
+                            lower = c(0,0,0,0),upper = c(1,100,10,10),
+                            data = raindata, coord = coord, ut = ut)
 
 ```
 
@@ -318,6 +314,15 @@ results.VAR1 <- list(sigma21 = cov.sigma21, beta1 = cov.beta1, alpha = cov.alpha
 save(results.VAR1,
      file = here("results", "estimation.cov.VAR1.RData"))
 results.VAR1.norm <- list(sigma21 = cov.sigma21.norm, beta1 = cov.beta1.norm, b0 = cov.b0.norm,b1 = cov.b1.norm, ut=ut, interval = back.trans.interval.norm)
+save(results.VAR1.norm,
+     file = here("results", "estimation.cov.VAR1.norm.RData"))
+```
+
+```{r save_estimations}
+results.VAR1 <- list(sigma21 = cov.optim.rslt.st$par[1], beta1 = cov.optim.rslt.st$par[2], b0 = cov.optim.rslt.st$par[3],b1 = cov.optim.rslt.st$par[4],alpha = cov.optim.rslt.st$par[5],nu =nu.best, ut = ut)
+save(results.VAR1,
+     file = here("results", "estimation.cov.VAR1.RData"))
+results.VAR1.norm <- list(sigma21 = cov.optim.rslt.norm$par[1], beta1 = cov.optim.rslt.norm$par[2], b0 = cov.optim.rslt.norm$par[3],b1 = cov.optim.rslt.norm$par[4], ut=ut)
 save(results.VAR1.norm,
      file = here("results", "estimation.cov.VAR1.norm.RData"))
 ```

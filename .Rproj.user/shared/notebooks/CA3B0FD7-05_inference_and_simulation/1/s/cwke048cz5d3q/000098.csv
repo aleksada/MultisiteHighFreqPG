@@ -1,6 +1,0 @@
-"0","par(mfrow=c(3,3))"
-"0","for (i in 1:8){"
-"0","    plot.ts(raindata[,i], "
-"0","            ylim = c(0, 0.1 + max(c(raindata[,i],round(y.st[,i])))))"
-"0","    lines(y.st[,i],col='grey')"
-"0","}"

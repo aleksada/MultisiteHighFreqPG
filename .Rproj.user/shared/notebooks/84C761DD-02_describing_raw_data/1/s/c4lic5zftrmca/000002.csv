@@ -1,2 +1,0 @@
-"0","par(mfrow=c(2,4))"
-"0","for(i in 1: 8) hist(rain1_table[,i + 1])"

@@ -18,6 +18,14 @@ information of precipitation data collected from University of Lausanne.
 For review, we briefly describe each of the three below.
 
 # Libraries
+
+```{r load_libs, message=FALSE}
+
+library(here)
+library(readr)
+
+```
+
 ```{r}
 if (!dir.exists(here("results"))) {
   cat("creating results/ directory\n")
@@ -26,13 +34,6 @@ if (!dir.exists(here("results"))) {
 ```
 
 
-
-```{r load_libs, message=FALSE}
-
-library(here)
-library(readr)
-
-```
 
 # Two Datasets of Rainfall Amount
 
