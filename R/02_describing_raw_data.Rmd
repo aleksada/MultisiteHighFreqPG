@@ -61,11 +61,11 @@ It has standard unit (mm per hour)
 
 ```{r load_raindata, warning=FALSE}
 
-rain1_table <- read.csv(here("data", "RaindataPerepoch.csv"), header=TRUE)
-rain2_table <- read.csv(here("data", "RaindataPerhour.csv"), header=TRUE)
+#rain1_table <- read.csv(here("data", "RaindataPerepoch.csv"), header=TRUE)
+rain1_table <- read.csv(here("data", "RaindataPerhour.csv"), header=TRUE)
 
 dim(rain1_table)
-dim(rain2_table)
+#dim(rain2_table)
 
 rain1_table[1:5, ]
 
