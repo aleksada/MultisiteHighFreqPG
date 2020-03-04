@@ -20,6 +20,7 @@ if (!dir.exists(here("data"))) {
   cat("creating data/ directory\n")
   dir.create(here("data"))
 }
+
 rain1_url  <- 
     "https://ndownloader.figshare.com/files/10938740"
 rain1_data_file  <- "RaindataPerhour.csv"
