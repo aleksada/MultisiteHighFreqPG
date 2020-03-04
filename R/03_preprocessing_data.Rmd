@@ -52,12 +52,6 @@ ggsave(filename=here("results","rainraw.pdf"), plot=rainraw, width = 11, height 
 
 ```
 
-```{r histogram}
-hist_raw <- ggplot(rain.long,aes(rain)) + geom_histogram(bins = 20)+ scale_x_log10()+scale_y_log10() + xlab("Rainfall Amount") + ylab("Frequency (in log scale)")
-#histraw 
-ggsave(filename=here("results","hist_raw.pdf"), plot=hist_raw, width = 7, height = 5)
-```
-
 ```{r qqplot}
 rainraw.pos<-rain.long[rain.long$rain>0,]
 qq_raw.pos <- ggplot(rainraw.pos, aes(sample=rain)) + 
@@ -71,10 +65,7 @@ rain_dist = cut(unlist(rain.raw[-28801,2:9]),c(0,1,1.2,5,10,50),include.lowest =
 tab = table(rain_dist) ##The last point was removed to get 10-day data
 names(tab)=
     c(" = 0", "(0,1.2]", "(1.2,5]", "(5,10]", "(10,33.6]")
-
 ```
-
-
 
 ##Minutely Data-not run
 ```{r 1 Minute Data, eval=FALSE}
