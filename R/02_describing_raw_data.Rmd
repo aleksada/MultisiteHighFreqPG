@@ -87,7 +87,6 @@ It motivates us to see how many zeros and the distribution of the dataset.
 ```{r check_distribution, eval = FALSE}
 par(mfrow=c(2,4))
 for(i in 1: 8) hist(rain1_table[,i + 1])
-table(rain1_table[,2])/28801
 ```
 
 As we can see, around 90% of observations are zeros indicating the dry events
