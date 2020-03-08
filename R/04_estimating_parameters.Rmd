@@ -161,7 +161,7 @@ ut.fun <- function(data,sep){
     #ht <- floor(sep * t/(2 * 60))%%24
     dt <- floor(94.5 + sep * t/(2 * 60 * 24))
     H <- 10
-    sint<- matrix(0, length(t), H)
+    cosdt<- matrix(0, length(t), H)
     sindt<- matrix(0, length(t), H)
     save.aic <- rep(0,H)
     for(i in 1:H){
@@ -172,7 +172,7 @@ ut.fun <- function(data,sep){
     save.aic[i] <- AIC(season.fit)
 }
 H.best <- which(save.aic == min(save.aic))
-season.fit.best <- glm(binaryrain ~ sint[,1:H.best] + sindt[,1:H.best], family="binomial")
+season.fit.best <- glm(binaryrain ~ cosdt[,1:H.best] + sindt[,1:H.best], family="binomial")
 fitted <- season.fit.best$fitted
 
 ut <- quantile(data, 1 - fitted)
@@ -201,7 +201,7 @@ rain.ut <- rain.long[-(1:8)*28801,]
 rain.ut$rain <- melt(ut)$value
 utfit<-ggplot(rain.ut,aes(y=rain,x=dt,group=sites,colour=sites))+
     geom_line()+facet_grid(sites ~ .) + xlab("Data and Time") + 
-    ylab("Rainfall Amount (count/epoch)")
+    ylab("Rainfall Threshold (mm/hr)")
 ggsave(filename=here("results","ut.pdf"), plot=utfit, width = 11, height = 9)
 ```
 
