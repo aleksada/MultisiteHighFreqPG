@@ -34,7 +34,7 @@ library(dplyr)
 # Change the data as dataframe
 ```{r process, warning=FALSE}
 
-rain.raw <- read.csv(here("data","RaindataPerepoch.csv"))
+rain.raw <- read.csv(here("data","RaindataPerhour.csv"))
 rain.long <- melt(rain.raw[,1:9], id=c("date...time"))
 rain.long <- data.frame(rain.long)
 
@@ -47,27 +47,24 @@ rain.long$Time <- format((rain.long$dt) ,format = "%H:%M:%S")
 # Plot the preprocessed data
 ```{r ggplot}
 rainraw <- ggplot(rain.long,aes(y=rain,x=dt,group=sites,colour=sites))+
-    geom_line()+facet_grid(sites ~ .) + xlab("Data and Time") + ylab("Rainfall Amount")
+    geom_line()+facet_grid(sites ~ .) + xlab("Data and Time") + ylab("Rain rate (mm/hr)")
 ggsave(filename=here("results","rainraw.pdf"), plot=rainraw, width = 11, height = 9)
 
-```
-
-```{r histogram}
-hist_raw <- ggplot(rain.long,aes(rain)) + geom_histogram(bins = 10)+ scale_y_log10() + xlab("Rainfall Amount") + ylab("Frequency (in log scale)")
-#histraw 
-ggsave(filename=here("results","hist_raw.pdf"), plot=hist_raw, width = 7, height = 5)
 ```
 
 ```{r qqplot}
 rainraw.pos<-rain.long[rain.long$rain>0,]
 qq_raw.pos <- ggplot(rainraw.pos, aes(sample=rain)) + 
     stat_qq(alpha=0.5) + stat_qq_line() +
-    xlab("Theoretical") + ylab("Sample")
+    xlab("Theoretical(mm/hr)") + ylab("Sample(mm/hr)")
 ggsave(filename=here("results","qq_raw.pdf"), plot=qq_raw.pos, width = 7, height = 5)
 ```
 
 ```{r distributional table}
-table(unlist(rain.raw[-28801,2:9])) ##The last point was removed to get 10-day data
+data_dist <- cut(unlist(rain.raw[-28801,2:9]),c(-0.1,0.1,2,5,10,33.6))
+data_table = table(data_dist) ##The last point was removed to get 10-day data
+names(data_table)<-c(" = 0", "(0,2]", "(2,5]", "(5,10]", "(10,33.6]")
+data_table
 ```
 
 
@@ -107,7 +104,7 @@ ggplot(rain.hour.df,aes(y=rain,x=dt,group=sites,colour=sites))+
 
 ```{r save the file}
 save(rain.long, file=here("results", "rain.long.RData"))
-save(rain.1min.df, file=here("results", "rain.1min.df.RData"))
+#save(rain.1min.df, file=here("results", "rain.1min.df.RData"))
 #save(rain.15min.df, file=here("results", "rain.15min.df.RData"))
 #save(rain.hour.df, file=here("results", "rain.hour.df.RData"))
 ```

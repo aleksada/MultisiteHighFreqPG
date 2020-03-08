@@ -158,16 +158,17 @@ ut.fun <- function(data,sep){
     binaryrain <- data > 0
     NT <- length(binaryrain)
     t <- (1:NT)-1
-    ht <- floor(sep * t/(2 * 60))%%24
+    #ht <- floor(sep * t/(2 * 60))%%24
     dt <- floor(94.5 + sep * t/(2 * 60 * 24))
     H <- 10
     sint<- matrix(0, length(t), H)
     sindt<- matrix(0, length(t), H)
     save.aic <- rep(0,H)
     for(i in 1:H){
-    sint[,i] <- sin(2 * i * pi * ht/24)
+    #sint[,i] <- sin(2 * i * pi * ht/24)
     sindt[,i] <- sin(2 * i * pi * dt/365)
-    season.fit <- glm(binaryrain ~ sint[,1:i]  +  sindt[,1:i],family = "binomial")
+    cosdt[,i] <- cos(2 * i * pi * dt/365)
+    season.fit <- glm(binaryrain ~ cosdt[,1:i]  +  sindt[,1:i],family = "binomial")
     save.aic[i] <- AIC(season.fit)
 }
 H.best <- which(save.aic == min(save.aic))
@@ -189,8 +190,8 @@ ut <- matrix(0,nrow(raindata),ncol(raindata))
 for (i in 1: ncol(raindata)){
 ut[,i] <- ut.fun(raindata[,i],sep=sep)
 }
-ut[nrow(raindata),] <- 1
-ut <- ifelse(ut>1,ut,1)
+ut[nrow(raindata),] <- 1.2
+ut <- ifelse(ut>1.2,ut,1.2)
 ```
 
 ##Plot fitted ut and save the plot
