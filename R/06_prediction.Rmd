@@ -1,0 +1,289 @@
+---
+title: "Prediction"
+author: "Yuxiao Li"
+output: 
+  github_document:
+    toc: true
+  html_document:
+    toc: true
+    number_sections: true
+    code_folding: hide
+---
+
+```{r, echo = FALSE}
+start_time <- Sys.time()
+```
+
+# Overview
+This file contains the code for prediction.
+
+In general, we want to
+* split the dataset to training and testing set
+* transfer the dataset to python to run the LSTM model
+* load the predicted value from LSTM model
+* calculate the predicted value from our model
+* compare the MSE and other important properties.
+
+# Librares and Data
+
+## Libraries
+
+```{r load_libs,message=FALSE}
+library(here)
+library(sn)
+library(geoR)
+library(reshape2)
+library(nloptr)
+```
+
+## Data
+
+Different resolution can be used for the analysis, the default setting is to use the rawdata, but we can also use the aggregated data in 1-minute, 15-minute, and hourly resolution.
+
+```{r load_data}
+
+load(here("results", "rain.long.RData"))
+raindata <- matrix(rain.long$rain[1:230400],28800,8)
+sep <- 1
+#load(here("results", "rain.1min.df.RData"))
+#raindata <- matrix(rain.1min.df$rain[1:115200],14400,8)
+#sep <- 2
+#load(here("results", "rain.15min.df.RData"))
+#raindata <- matrix(rain.15min.df$rain[1:7680],960,8)
+#sep <- 30
+##load(here("results", "rain.hour.df.RData"))
+#raindata <- matrix(rain.hour.df$rain[1:1920],240,8)
+#sep <- 120
+```
+
+## Save the data as csv to be used in Python
+```{r}
+write.csv(rain.long,file=here("results", "rain.raw.df.csv"))
+```
+
+#Required Functions
+## Fit using matern covariance function and skew-t error
+```{r likelihood function skew t}
+varlik.sp.var1.st <- function(params, data, coord, ut, nu){
+    NS <- ncol(data)
+    NT <- nrow(data)
+    sigma21 <- exp(params[1])/(1+exp(params[1]))  # The variance parameter B1
+    beta1 <- exp(params[2])    # The spatial range parameter B1
+    b0 <- exp(params[3])
+    b1 <- exp(params[4])
+    alpha <- exp(params[5]) #Skewness parameter
+    nu <- nu ## Degree of freedom
+    # Compute the variograms under the model
+    dist <- matrix(0, NS, NS) # The distances between locations
+    for (i in 1:NS) {
+        for (j in 1:NS) {
+            dist[i,j] <- 
+                sqrt((coord[i,2]-coord[j,2])^2+(coord[i,3]-coord[j,3])^2)
+        }
+    }
+    # The covariance matrix under model with nugget effect
+    B1 <- sigma21 * matern(dist,beta1,1)
+    #if(eigen(B1)$values[1] >= 0.99) {
+     #   warning("The process is not stationary, return -1e16")
+      #  return(1e16)
+       # }
+    sigt_plus <- b0 + b1 * apply(data,1,mean)
+    
+    ##Construct the likelihood function
+    sum.lik <- 0
+    data.lag1 <- data[-1,]
+    for (s in 1:NS){
+        index.posi <- which(data.lag1[,s] > 0)
+        index.zero <- which(data.lag1[,s] == 0)
+        x <- (data.lag1[index.posi,s] - data[index.posi,] %*% B1[s,])/
+            sigt_plus[index.posi]
+        u <- (ut[index.zero + 1, s] - data[index.zero,] %*% B1[s,])/
+            sigt_plus[index.zero]
+        bvdelta <- sqrt(nu) * gamma(1/2 * (nu - 1))/sqrt(pi)/gamma(1/2 * nu) * 
+         alpha/sqrt(1 + alpha^2)
+        omega <- 1/sqrt((nu/(nu-2) - bvdelta^2))
+        xi<- -omega * bvdelta
+        part1 <- dst(x, xi, omega, alpha, nu, log=TRUE) #First term
+        part2 <- log(sigt_plus[index.posi]) #Second term
+        part3 <- log(pst(u, xi, omega, alpha, nu)) #Third term
+        sum.lik <- sum.lik + sum(part1) - sum(part2) + sum(part3)
+    }
+        #message(c(sigma21,beta1,alpha,b0,b1))
+    return(-sum.lik)
+}
+```
+
+## Split the data
+```{r}
+N.train = 2*60*24*9
+N.test = 2*60*24
+raindata.train <- raindata[1:N.train,]
+raindata.test <- raindata[(N.train+1):(N.train + N.test),]
+```
+
+##Fit the training data
+```{r estimate skew t}
+NT <- nrow(raindata)
+NS <- ncol(raindata)
+
+init <- c()
+#init[1] <- 0.1/(1/NS-0.1) #variance
+init[1] <- 0.1
+init[2] <- 1 #spatial range
+init[3] <- .5
+init[4] <- .5
+init[5] <- 1 #positive skewness alpha
+init <- log(init)
+#cov.optim.rslt.st <- optim(par=init,fn = varlik.sp.var1.st,
+#                    data = raindata, coord = coord, ut = ut, nu = 4, 
+#                    hessian = TRUE)
+#cov.optim.rslt.st.1 <- bobyqa(x0=init,fn = varlik.sp.var1.st,
+#                    data = raindata, coord = coord, ut = ut, nu = 4)
+cov.optim.rslt.st.1 <- neldermead(x0=init,fn = varlik.sp.var1.st,
+                    data = raindata.train, coord = coord, ut = ut[1:N.train,], nu = 4)
+#cov.optim.rslt.st.1 <- lbfgs(x0=init,fn = varlik.sp.var1.st,
+#                    data = raindata, coord = coord, ut = ut, nu = 4)
+```
+
+
+##Return the estimated values
+```{r est results spatial skew t}
+cov.optim.rslt <- cov.optim.rslt.st.1
+
+# The covariance matrix under model with nugget effect
+sigma21 <- exp(cov.optim.rslt$par[1])/(1+exp(cov.optim.rslt$par[1]))
+#cov.sigma21 <- exp(cov.optim.rslt$par[1])
+beta1 <- exp(cov.optim.rslt$par[2])
+b0 <- exp(cov.optim.rslt$par[3])
+b1 <- exp(cov.optim.rslt$par[4])
+alpha <- exp(cov.optim.rslt$par[5])
+```
+
+#Prediction
+
+##Conditional simulation function
+```{r multiple simulations}
+
+nsims.app <- function(NT,NS,sigma21,beta1,b0,b1,alpha,nu,niters,true,ut){
+    error <- array(0,c(NT,NS,niters))
+    y <- array(0,c(NT,NS,niters))
+    dist <- matrix(data = 0, nrow = NS, ncol = NS) # The distances between locations
+    for (i in 1:NS) {
+        for (j in 1:NS) {
+            dist[i,j] <- sqrt((coord[i,2]-coord[j,2])^2+(coord[i,3]-coord[j,3])^2)   
+        }
+    }
+    B1 <-  sigma21 * matern(dist,beta1,1)
+    for(iter in 1: niters){
+        for(s in 1 :NS){
+            nu <- nu
+            bvdelta <- sqrt(nu) * gamma(1/2 * (nu - 1))/sqrt(pi)/gamma(1/2 * nu) * 
+            alpha/sqrt(1 + alpha^2)
+            omega <- 1/sqrt((nu/(nu-2) - bvdelta^2))
+            xi<- -omega * bvdelta
+            error[,s,iter] <- rst(NT, xi = xi, omega = omega, alpha, nu)
+        }
+
+        for(t in 2: NT){
+        y[t,,iter] <- B1 %*% true[t - 1,] + 
+                            error[t,,iter] * (b0 + b1 * mean(true[t - 1,]))
+        y[t,,iter] <- ifelse(y[t,,iter] > ut[t,], y[t,,iter], 0)
+        }
+    }
+    return(y)
+}
+```
+
+##Predition from our model
+```{r}
+niters<-50
+app.sim <- nsims.app(N.test,NS,sigma21,beta1,b0,b1,
+                  alpha,4,niters,raindata.test,ut=ut[(N.train+1):(N.train + N.test),])
+```
+
+```{r}
+est.LSTM <- read.csv(here("results", "rainest.csv"),header = FALSE)
+```
+
+##Visualize the results
+```{r}
+plot.ts((apply(app.sim,c(1,2),mean)))
+plot.ts(raindata.test)
+plot.ts(est.LSTM)
+```
+
+```{r}
+rain.raw <- read.csv(here("data","RaindataPerepoch.csv"))
+rain.long <- melt(rain.raw[(N.train+1):(N.train + N.test),1:9], id=c("date...time"))
+rain.long <- data.frame(rain.long)
+
+names(rain.long)<-c("dt","sites","rain")
+rain.long$dt <- as.POSIXct(strptime(rain.long$dt,format="%d.%m.%Y  %H:%M:%S"))
+rain.long$Date <- as.Date(rain.long$dt)
+rain.long$Time <- format((rain.long$dt) ,format = "%H:%M:%S")
+rain.sims <- rain.long[1:(2877*8),]
+rain.sims$rain <- melt(raindata.test[4:2880])$value
+rain.sims$LSTM <- melt(est.LSTM)$value
+rain.sims$PG_mean <- melt(apply(app.sim[3:2879,,],c(1,2),mean))$value
+rain.sims$PG_up <- melt(apply(app.sim[3:2879,,],c(1,2),quantile,0.975))$value
+rain.sims$PG_low <- melt(apply(app.sim[3:2879,,],c(1,2),quantile,0.025))$value
+rain.sim.plot<-ggplot(rain.sims,aes(x=dt,group=sites))+
+    geom_line(aes(y = rain,color='Observation'),alpha=0.8)+
+     geom_line(aes(y = LSTM,color='LSTM Prediction'),alpha=0.8) + 
+        geom_line(aes(y = PG_mean,color='Skew-t Prediction'),alpha=0.8) + 
+        facet_grid(sites ~ .) + xlab("Data and Time") + ylab("Amount of Rain")+
+        guides(colour=guide_legend(title="Data Type",reverse =TRUE))
+
+rain.sim.plot
+```
+
+```{r}
+rain.raw <- read.csv(here("data","RaindataPerepoch.csv"))
+rain.long <- melt(rain.raw[(N.train+800):(N.train + N.test-1804),1:9], id=c("date...time"))
+rain.long <- data.frame(rain.long)
+
+names(rain.long)<-c("dt","sites","rain")
+rain.long$dt <- as.POSIXct(strptime(rain.long$dt,format="%d.%m.%Y  %H:%M:%S"))
+rain.long$Date <- as.Date(rain.long$dt)
+rain.long$Time <- format((rain.long$dt) ,format = "%H:%M:%S")
+rain.sims <- rain.long[1:((2877-2600)*8),]
+rain.sims$rain <- melt(raindata.test[(800+4):(2880-1800)])$value
+rain.sims$LSTM <- melt(est.LSTM[801:(2877-1800),])$value
+rain.sims$PG_mean <- melt(apply(app.sim[(3+800):(2879-1800),,],c(1,2),mean))$value
+rain.sims$PG_up <- melt(apply(app.sim[(3+800):(2879-1800),,],c(1,2),quantile,0.975))$value
+rain.sims$PG_low <- melt(apply(app.sim[(3+800):(2879-1800),,],c(1,2),quantile,0.025))$value
+
+rain.sim.plot1<-ggplot(rain.sims,aes(x=dt,group=sites))+
+    geom_line(aes(y = rain,color='Observation'),alpha=1)+
+     geom_line(aes(y = PG_mean,color='Skew-t Prediction'),alpha=1) + 
+        geom_line(aes(y = LSTM,color='LSTM Prediction'),alpha=1) + 
+        geom_ribbon(aes(ymin=PG_low, ymax=PG_up,fill = "Skew-t Prediction"), alpha=0.2)+
+        facet_grid(sites ~ .) + xlab("Data and Time") + ylab("Amount of Rain")+
+         guides(colour=guide_legend(title="Data Type"),
+                fill=guide_legend(title="Prediction Band")) + 
+                scale_fill_manual(values=c("blue"), name="fill")
+
+rain.sim.plot1
+```
+
+
+##Calculate MSE
+```{r}
+mse.pg = mean((apply(app.sim,c(1,2),mean)[-2880,]-raindata.test[-1,])^2)
+mse.pg.single <- c()
+for(i in 1:50){
+    mse.pg.single[i] = mean((app.sim[-2880,,i]-raindata.test[-1,])^2)
+}
+
+
+mse.LSTM = sum((est.LSTM - raindata.test[-c(1,2,3),])^2)/2877/8
+```
+
+```{r}
+ggsave(filename=here("results","pred1.pdf"),device='pdf', plot=rain.sim.plot,width = 8, height = 6)
+```
+
+```{r}
+ggsave(filename=here("results","pred2.pdf"),device='pdf', plot=rain.sim.plot1,width = 8, height = 6)
+```
+

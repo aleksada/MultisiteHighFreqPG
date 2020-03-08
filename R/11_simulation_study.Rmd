@@ -40,11 +40,15 @@ library(cowplot)
 ### Function to simulate data
 
 ```{r simulate rainfall}
-sims <- function(NT,NS,sigma21,beta1,b0,b1,alpha,nu,ut){
-    error.sim <- matrix(0,NT,NS)
-    distance <- as.matrix(dist(coord[1:NS,2:3], diag = TRUE, upper = TRUE))
-    # The covariance matrix under model with nugget effect
-    B1 <- sigma21 ^ 2 * exp(- (distance/beta1)^2)
+sims <- function(NT,NS,sigma21,beta1,b0,b1,alpha,nu){
+   error.sim <- matrix(0,NT,NS)
+   dist <- matrix(data = 0, nrow = NS, ncol = NS) # The distances between locations
+    for (i in 1:NS) {
+        for (j in 1:NS) {
+            dist[i,j] <- sqrt((coord[i,2]-coord[j,2])^2+(coord[i,3]-coord[j,3])^2)   
+        }
+    }
+    B1 <-  sigma21 * exp(-  dist/beta1)
     set.seed(1)
     for(s in 1 :NS){
         nu <- nu
@@ -56,7 +60,7 @@ sims <- function(NT,NS,sigma21,beta1,b0,b1,alpha,nu,ut){
     }
 
     y.sim <- matrix(0,NT,NS)
-    ut.sim <- matrix(rep(ut,each=1+NT/length(ut[,1])),ncol = 8)[1:NT,1:NS]
+    ut.sim <- ut[seq(1,28800,28800/NT),1:NS]
     for(t in 2: NT){
         y.sim[t,] <- B1 %*% y.sim[t - 1,] + error.sim[t,] * (b0 + b1 * mean(y.sim[t - 1,]))
         y.sim[t,] <- ifelse(y.sim[t,] > ut.sim[t,], y.sim[t,], 0)
@@ -72,22 +76,26 @@ sims <- function(NT,NS,sigma21,beta1,b0,b1,alpha,nu,ut){
 load(here("results", "estimation.cov.VAR1.RData"))
 NT <- 10000
 NS <- 3
-sigma21 <- 1/3
+sigma21 <- 1/(NS+1)
 beta1 <- 1
-distance <- as.matrix(dist(coord[1:NS,2:3], diag = TRUE, upper = TRUE))
-# The covariance matrix under model with nugget effect
-B1 <- sigma21 ^ 2 * exp(- (distance/beta1)^2)
+dist <- matrix(data = 0, nrow = NS, ncol = NS) # The distances between locations
+for (i in 1:NS) {
+    for (j in 1:NS) {
+        dist[i,j] <- sqrt((coord[i,2]-coord[j,2])^2+(coord[i,3]-coord[j,3])^2)   
+    }
+}
+B1 <-  sigma21 * exp(- dist/beta1)
 b0 <- 0.5
 b1 <- 0.5
-alpha <- 10
+alpha <- 3
 nu <- 3
 ut <- results.VAR1$ut
-#ut.sim <- ut[seq(1,28800,28800/NT),1:NS]
+ut.sim <- ut[seq(1,28800,28800/NT),1:NS]
 ```
 
 ### Simulate one replicate
 ```{r simulate 1 error, eval = FALSE}
-y.sim <- sims(NT,NS,sigma21,beta1,b0,b1,0,20,ut)
+y.sim <- sims(NT,NS,sigma21,beta1,b0,b1,alpha,nu)
 plot.ts(y.sim$y.sim)
 ```
 
@@ -95,12 +103,12 @@ plot.ts(y.sim$y.sim)
 ### Simulate different cases wrt alpha and nu
 ```{r different alpha and nu}
 y.sim.vis <- matrix(0,NT,6)
-y.sim.vis[,1] <- sims(NT,NS,sigma21,beta1,b0,b1,0,20,ut)$y.sim[,1]
-y.sim.vis[,2] <- sims(NT,NS,sigma21,beta1,b0,b1,5,20,ut)$y.sim[,1]
-y.sim.vis[,3] <- sims(NT,NS,sigma21,beta1,b0,b1,0,7,ut)$y.sim[,1]
-y.sim.vis[,4] <- sims(NT,NS,sigma21,beta1,b0,b1,5,7,ut)$y.sim[,1]
-y.sim.vis[,5] <- sims(NT,NS,sigma21,beta1,b0,b1,0,3,ut)$y.sim[,1]
-y.sim.vis[,6] <- sims(NT,NS,sigma21,beta1,b0,b1,5,3,ut)$y.sim[,1]
+y.sim.vis[,1] <- sims(NT,NS,sigma21,beta1,b0,b1,0,20)$y.sim[,1]
+y.sim.vis[,2] <- sims(NT,NS,sigma21,beta1,b0,b1,5,20)$y.sim[,1]
+y.sim.vis[,3] <- sims(NT,NS,sigma21,beta1,b0,b1,0,7)$y.sim[,1]
+y.sim.vis[,4] <- sims(NT,NS,sigma21,beta1,b0,b1,5,7)$y.sim[,1]
+y.sim.vis[,5] <- sims(NT,NS,sigma21,beta1,b0,b1,0,3)$y.sim[,1]
+y.sim.vis[,6] <- sims(NT,NS,sigma21,beta1,b0,b1,5,3)$y.sim[,1]
 
 
 
@@ -160,83 +168,6 @@ dev.off()
 
 
 ## Estimate all other parameters - with spatial covariance var 1-st
-
-
-```{r}
-varlik.sp.var1.st.sim <- function(params, data, coord, ut, nu){
-    NS <- ncol(data)
-    NT <- nrow(data)
-    sigma21 <- params[1]  # The variance parameter B1
-    beta1 <- params[2]    # The spatial range parameter B1
-    b0 <- params[3]
-    b1 <- params[4]
-    alpha <- params[5] #Skewness parameter
-    nu <- nu ## Degree of freedom
-    # Compute the variograms under the model
-    distance <- as.matrix(dist(coord[1:NS,2:3], diag = TRUE, upper = TRUE))
-    # The covariance matrix under model with nugget effect
-    B1 <- sigma21 ^ 2 * exp(- (distance/beta1)^2)
-    sigt_plus <- b0 + b1 * apply(data,1,mean)
-    ut.sim <- matrix(rep(ut,each=1+NT/length(ut[,1])),ncol = 8)[1:NT,1:NS]
-    ##Construct the likelihood function
-    sum.lik <- 0
-    data.lag1 <- data[-1,]
-    for (s in 1:NS){
-        index.posi <- which(data.lag1[,s] > 0)
-        index.zero <- which(data.lag1[,s] == 0)
-        x <- (data.lag1[index.posi,s] - data[index.posi,] %*% B1[s,])/
-            sigt_plus[index.posi]
-        u <- (ut.sim[index.zero + 1, s] - data[index.zero,] %*% B1[s,])/
-            sigt_plus[index.zero]
-        bvdelta <- sqrt(nu) * gamma(1/2 * (nu - 1))/sqrt(pi)/gamma(1/2 * nu) * 
-         alpha/sqrt(1 + alpha^2)
-        omega <- 1/sqrt((nu/(nu-2) - bvdelta^2))
-        xi<- -omega * bvdelta
-        part1 <- dst(x, xi, omega, alpha, nu, log=TRUE) #First term
-        part2 <- log(sigt_plus[index.posi]) #Second term
-        part3 <- log(pst(u, xi, omega, alpha, nu)) #Third term
-        sum.lik <- sum.lik + sum(part1) - sum(part2) + sum(part3)
-    }
-        #message(c(sigma21,beta1,alpha,b0,b1))
-    return(-sum.lik)
-}
-```
-
-```{r likelihood function normal}
-varlik.sp.var1.norm.sim <- function(params, data, coord, ut){
-    NS <- ncol(data)
-    NT <- nrow(data)
-    #sigma21 <- exp(params[1])
-    sigma21 <- params[1]  # The variance parameter B1
-    beta1 <- params[2]    # The spatial range parameter B1
-    b0 <- params[3]
-    b1 <- params[4]
-    # Compute the variograms under the model
-    distance <- as.matrix(dist(coord[1:NS,2:3], diag = TRUE, upper = TRUE))
-    # The covariance matrix under model with nugget effect
-    B1 <- sigma21^2 * exp(- (distance/beta1)^2)
-    sigt_plus <- b0 + b1 * apply(data,1,mean)
-    sum.lik <- 0
-    ut.sim <- matrix(rep(ut,each=1+NT/length(ut[,1])),ncol = 8)[1:NT,1:NS]
-    data.lag1 <- data[-1,]
-    for (s in 1:NS){
-        index.posi <- which(data.lag1[,s] > 0)
-        index.zero <- which(data.lag1[,s] == 0)
-        x <- (data.lag1[index.posi,s] - data[index.posi,] %*% B1[s,])/
-            sigt_plus[index.posi]
-        u <- (ut.sim[index.zero + 1, s] - data[index.zero,] %*% B1[s,])/
-            sigt_plus[index.zero]
-        
-        part1 <- dnorm(x, log=TRUE)
-        part2 <- log(sigt_plus[index.posi])
-        part3 <- pnorm(u,log.p=TRUE)
-        sum.lik <- sum.lik + sum(part1) - sum(part2) + sum(part3)
-    }
-   # message(c(sigma21,beta1,b0,b1))
-    return(-sum.lik)
-}
-```
-
 ### likelihood function
 ```{r lik fun}
 est.sims<-function(y.sim, nu){
@@ -245,47 +176,71 @@ est.sims<-function(y.sim, nu){
 
     init <- c()
     #init[1] <- 0.1/(1/NS-0.1) #variance
-    init[1] <- 0.3
+    init[1] <- 0.1
     init[2] <- 1 #spatial range
-    init[3] <- 0.5
-    init[4] <- 0.5
-    init[5] <- 3 #positive skewness alpha
-    #cov.optim.rslt.st <- optim(par=init,fn = varlik.sp.var1.st,
-    #                    data = raindata, coord = coord, ut = ut, nu = 4, 
-    #                    hessian = TRUE)
-    cov.optim.rslt.st <- neldermead(x0=init,fn = varlik.sp.var1.st.sim,
-                            lower = c(0,0,0,0,-10),upper = c(1,10,10,10,100),
-                            data = y.sim, coord = coord, ut = ut, nu = nu)
-    est_st <- cov.optim.rslt.st$par
+    init[3] <- .5
+    init[4] <- .5
+    init[5] <- 1 #positive skewness alpha
+    init <- log(init)
+    cov.optim.rslt.st <- optim(par=init,fn = varlik.sp.var1.st,method="BFGS",
+                    data = y.sim, coord = coord, ut = ut.sim, nu = nu)
+    st.sigma21 <- exp(cov.optim.rslt.st$par[1])/(1+exp(cov.optim.rslt.st$par[1]))
+    st.beta1 <- exp(cov.optim.rslt.st$par[2])
+    st.b0 <- exp(cov.optim.rslt.st$par[3])
+    st.b1 <- exp(cov.optim.rslt.st$par[4])
+    st.alpha <- exp(cov.optim.rslt.st$par[5])
+    est_st <- c(st.sigma21,st.beta1,st.b0,st.b1,st.alpha)
     
     init_norm <- init[-5]
-    cov.optim.rslt.norm <- neldermead(x0=init_norm,fn = varlik.sp.var1.norm.sim,
-                            lower = c(0,0,0,0),upper = c(1,10,10,10),
-                            data = y.sim, coord = coord, ut = ut)
-    est_n<-cov.optim.rslt.norm$par
+    cov.optim.rslt.norm <- optim(par=init_norm,fn = varlik.sp.var1.norm,
+                                 method = "BFGS",data = y.sim, coord = coord, 
+                                 ut = ut.sim)
+    norm.sigma21 <- exp(cov.optim.rslt.norm$par[1])/
+        (1+exp(cov.optim.rslt.norm$par[1]))
+    norm.beta1 <- exp(cov.optim.rslt.norm$par[2])
+    norm.b0 <- exp(cov.optim.rslt.norm$par[3])
+    norm.b1 <- exp(cov.optim.rslt.norm$par[4])
+    est_n<-c(norm.sigma21,norm.beta1,norm.b0,norm.b1)
     return(list(est_st=est_st,est_n=est_n))
 }
 
 ```
 
 
-
-
-
 ### Run the estimations
 ```{r fit}
-y.sim <- sims(10000,3,sigma21,beta1,b0,b1,0,3,ut)$y.sim
+y.sim <- sims(10000,3,sigma21,beta1,b0,b1,0,3)$y.sim
 est1 <- est.sims(y.sim=y.sim,nu=3)
-y.sim2 <- sims(10000,3,sigma21,beta1,b0,b1,5,3,ut)$y.sim
+y.sim2 <- sims(10000,3,sigma21,beta1,b0,b1,5,3)$y.sim
 est2 <- est.sims(y.sim=y.sim2,nu=3)
 y.sim3 <- sims(10000,3,sigma21,beta1,b0,b1,0,7)$y.sim
 est3 <- est.sims(y.sim=y.sim3,nu=7)
 y.sim4 <- sims(10000,3,sigma21,beta1,b0,b1,5,7)$y.sim
 est4 <- est.sims(y.sim=y.sim4,nu=7)
-y.sim5 <- sims(10000,3,sigma21,beta1,b0,b1,0,20,ut)$y.sim
+y.sim5 <- sims(10000,3,sigma21,beta1,b0,b1,0,20)$y.sim
 est5 <- est.sims(y.sim=y.sim5,nu=20)
 y.sim6 <- sims(10000,3,sigma21,beta1,b0,b1,5,20)$y.sim
 est6 <- est.sims(y.sim=y.sim6,nu=20)
+```
+
+```{r}
+for (i in 1:10){
+y.sim <- sims(10000,3,sigma21,beta1,b0,b1,0,3)$y.sim
+est1 <- est.sims(y.sim=y.sim,nu=3)
+y.sim2 <- sims(10000,3,sigma21,beta1,b0,b1,5,3)$y.sim
+est2 <- est.sims(y.sim=y.sim2,nu=3)
+y.sim3 <- sims(10000,3,sigma21,beta1,b0,b1,0,7)$y.sim
+est3 <- est.sims(y.sim=y.sim3,nu=7)
+y.sim4 <- sims(10000,3,sigma21,beta1,b0,b1,5,7)$y.sim
+est4 <- est.sims(y.sim=y.sim4,nu=7)
+y.sim5 <- sims(10000,3,sigma21,beta1,b0,b1,0,20)$y.sim
+est5 <- est.sims(y.sim=y.sim5,nu=20)
+y.sim6 <- sims(10000,3,sigma21,beta1,b0,b1,5,20)$y.sim
+est6 <- est.sims(y.sim=y.sim6,nu=20)
+mat.est<-cbind(unlist(est1),unlist(est2),unlist(est3),unlist(est4),unlist(est5),unlist(est6))
+save(mat.est, file = here("results",paste0("sim.est",i,".RData")))
+}
+
 ```
 
 ### Save the estimation

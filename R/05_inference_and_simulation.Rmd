@@ -35,36 +35,19 @@ In general, we want to
 library(here)
 library(geoR)
 library(sn)
+#library(cowplot)
 ```
 
 ## load data
 ```{r load estimate values}
 load(here("results", "estimation.cov.VAR1.RData"))
-#load(here("results", "rain.long.RData"))
-#raindata <- matrix(rain.long$rain[1:230400],28800,8)
-load(here("results", "rain.15min.df.RData"))
-raindata <- matrix(rain.15min.df$rain[1:7680],960,8)
+load(here("results", "rain.long.RData"))
+raindata <- matrix(rain.long$rain[1:230400],28800,8)
+#raindata <- matrix(rain.1min.df$rain[1:115200],14400,8)
 NT <- nrow(raindata)
 NS <- ncol(raindata)
 sigma21.st <- results.VAR1$sigma21
 beta1.st <- results.VAR1$beta1
-distance <- as.matrix(dist(coord[,2:3], diag = TRUE, upper = TRUE))
-# The covariance matrix under model with nugget effect
-B1.st <- sigma21.st ^ 2 * exp(- (distance/beta1.st)^2)
-alpha <- results.VAR1$alpha
-b0.st <- results.VAR1$b0
-b1.st <- results.VAR1$b1
-ut <- results.VAR1$ut
-nu <- results.VAR1$nu
-```
-
-```{r}
-#raindata <- matrix(rain.long$rain[1:230400],28800,8)
-raindata <- matrix(rain.15min.df$rain[1:7680],960,8)
-NT <- nrow(raindata)
-NS <- ncol(raindata)
-sigma21.st <- 0.1548216
-beta1.st <- 1.8026771
 dist <- matrix(data = 0, nrow = NS, ncol = NS) # The distances between locations
 for (i in 1:NS) {
     for (j in 1:NS) {
@@ -72,27 +55,28 @@ for (i in 1:NS) {
     }
 }
 B1.st <-  sigma21.st * matern(dist,beta1.st,1)
-alpha <- 10.7546466
-b0.st <- 0.7167328
-b1.st <- 0.9950946
+alpha <- results.VAR1$alpha
+b0.st <- results.VAR1$b0
+b1.st <- results.VAR1$b1
+ut <- results.VAR1$ut
 ```
-
-
 
 ```{r load estimate values norm}
 load(here("results", "estimation.cov.VAR1.norm.RData"))
-#load(here("results", "rain.long.RData"))
-#raindata <- matrix(rain.long$rain[1:230400],28800,8)
+load(here("results", "rain.long.RData"))
+raindata <- matrix(rain.long$rain[1:230400],28800,8)
 #raindata <- matrix(rain.1min.df$rain[1:115200],14400,8)
-load(here("results", "rain.15min.df.RData"))
-raindata <- matrix(rain.15min.df$rain[1:7680],960,8)
 NT <- nrow(raindata)
 NS <- ncol(raindata)
 sigma21.norm <- results.VAR1.norm$sigma21
 beta1.norm <- results.VAR1.norm$beta1
-distance <- as.matrix(dist(coord[,2:3], diag = TRUE, upper = TRUE))
-# The covariance matrix under model with nugget effect
-B1.norm <- sigma21.norm ^ 2 * exp(- (distance/beta1.norm)^2)
+dist <- matrix(data = 0, nrow = NS, ncol = NS) # The distances between locations
+for (i in 1:NS) {
+    for (j in 1:NS) {
+        dist[i,j] <- sqrt((coord[i,2]-coord[j,2])^2+(coord[i,3]-coord[j,3])^2)   
+    }
+}
+B1.norm <-  sigma21.norm * matern(dist,beta1.norm,1)
 b0.norm <- results.VAR1.norm$b0
 b1.norm <- results.VAR1.norm$b1
 ```
@@ -105,7 +89,7 @@ b1.norm <- results.VAR1.norm$b1
 error.st <- matrix(0,NT,NS)
 set.seed(4)
 for(s in 1 :NS){
-    nu <- 7
+    nu <- 4
     bvdelta <- sqrt(nu) * gamma(1/2 * (nu - 1))/sqrt(pi)/gamma(1/2 * nu) * 
         alpha/sqrt(1 + alpha^2)
     omega <- 1/sqrt((nu/(nu-2) - bvdelta^2))
@@ -117,8 +101,7 @@ for(s in 1 :NS){
 ```{r simulate 1 rainfall st}
 y.st <- matrix(0,NT,NS)
 for(t in 2: NT){
-    y.st[t,] <- B1.st %*% raindata[t - 1,] + 
-        error.st[t,] * (b0.st + b1.st * mean(raindata[t - 1,]))
+    y.st[t,] <- B1.st %*% raindata[t - 1,] + error.st[t,] * (b0.st + b1.st * mean(raindata[t - 1,]))
     y.st[t,] <- ifelse(y.st[t,] > ut[t,], y.st[t,], 0)
 }
 ```
@@ -127,7 +110,7 @@ for(t in 2: NT){
 
 ```{r simulate 1 error norm}
 error.norm <- matrix(0,NT,NS)
-set.seed(1)
+set.seed(4)
 for(s in 1 :NS) error.norm[,s] <- rnorm(NT)
 ```
 
@@ -173,7 +156,7 @@ for (i in 1:8){
 
 ##ggplot
 ```{r skew-t sims,eval=FALSE}
-rain.sims <- rain.15min.df[-(8*960+1),]
+rain.sims <- rain.long[-(1:8)*28801,]
 rain.sims$rain1 <- melt(y.st)$value
 rain.sim.plot<-ggplot(rain.sims,aes(x=dt,group=sites))+
     geom_line(aes(y = rain,color='Observation'),alpha=0.6)+
@@ -185,7 +168,7 @@ rain.sim.plot
 ```
 
 ```{r Gaussian sims,eval=FALSE}
-rain.sims <- rain.15min.df[-(8*960+1),]
+rain.sims <- rain.long[-(1:8)*28801,]
 rain.sims$rain1 <- melt(y.norm)$value
 rain.sim.plot.norm<-ggplot(rain.sims,aes(x=dt,group=sites))+
     geom_line(aes(y = rain,color='Observation'),alpha=0.6)+
@@ -205,9 +188,13 @@ rain.sim.plot.norm
 nsims.app <- function(NT,NS,sigma21,beta1,b0,b1,alpha,nu,niters,true){
     error <- array(0,c(NT,NS,niters))
     y <- array(0,c(NT,NS,niters))
-    distance <- as.matrix(dist(coord[,2:3], diag = TRUE, upper = TRUE))
-    # The covariance matrix under model with nugget effect
-    B1 <- sigma21 ^ 2 * exp(- (distance/beta1)^2)
+    dist <- matrix(data = 0, nrow = NS, ncol = NS) # The distances between locations
+    for (i in 1:NS) {
+        for (j in 1:NS) {
+            dist[i,j] <- sqrt((coord[i,2]-coord[j,2])^2+(coord[i,3]-coord[j,3])^2)   
+        }
+    }
+    B1 <-  sigma21 * matern(dist,beta1,1)
     for(iter in 1: niters){
         for(s in 1 :NS){
             nu <- nu
@@ -233,9 +220,13 @@ nsims.app <- function(NT,NS,sigma21,beta1,b0,b1,alpha,nu,niters,true){
 nsims.app.norm <- function(NT,NS,sigma21,beta1,b0,b1,niters,true){
     error <- array(0,c(NT,NS,niters))
     y <- array(0,c(NT,NS,niters))
-    distance <- as.matrix(dist(coord[,2:3], diag = TRUE, upper = TRUE))
-    # The covariance matrix under model with nugget effect
-    B1 <- sigma21 ^ 2 * exp(- (distance/beta1)^2)
+    dist <- matrix(data = 0, nrow = NS, ncol = NS) # The distances between locations
+    for (i in 1:NS) {
+        for (j in 1:NS) {
+            dist[i,j] <- sqrt((coord[i,2]-coord[j,2])^2+(coord[i,3]-coord[j,3])^2)   
+        }
+    }
+    B1 <-  sigma21 * matern(dist,beta1,1)
     for(iter in 1: niters){
         for(s in 1 :NS){
             error[,s,iter] <- rnorm(NT)
@@ -253,10 +244,10 @@ nsims.app.norm <- function(NT,NS,sigma21,beta1,b0,b1,niters,true){
 
 ##Simulation 50 replications
 ```{r run functions}
-set.seed(4)
+set.seed(1)
 niters<-50
 app.sim <- nsims.app(NT,NS,sigma21.st,beta1.st,b0.st,b1.st,
-                  alpha,7,niters,raindata)
+                  alpha,4,niters,raindata)
 app.sim.norm <- nsims.app.norm(NT,NS,sigma21.norm,beta1.norm,b0.norm,b1.norm,
                   niters,raindata)
 ```
@@ -282,7 +273,7 @@ for (j in 1 :niters){
    quan.app.norm[j,]<- quantile(app.sim.norm[,,j],1:10000/10000) 
    quan.app.true<- quantile(raindata,1:10000/10000) 
 }
-quan.df.app <- data.frame(x=rep(quan.app.true,3),median=c(apply(quan.app,2,sort)[26,],apply(quan.app.norm,2,sort)[26,],quan.app.true),lower=c(apply(quan.app,2,sort)[2,],apply(quan.app.norm,2,sort)[2,],rep(NA,10000)),upper=c(apply(quan.app,2,sort)[49,],apply(quan.app.norm,2,sort)[49,],rep(NA,10000)),Type=c(rep("Skew-t",10000),rep("Gaussian",10000),rep("Truth",10000)))
+quan.df.app <- data.frame(x=rep(quan.app.true,3),median=c(apply(quan.app,2,sort)[26,],apply(quan.app.norm,2,sort)[26,],quan.app.true),lower=c(apply(quan.app,2,sort)[2,],apply(quan.app.norm,2,sort)[2,],rep(NA,10000)),upper=c(apply(quan.app,2,sort)[49,],apply(quan.app.norm,2,sort)[49,],rep(NA,10000)),Type=c(rep("Skew-t Simulation",10000),rep("Gaussian Simulation",10000),rep("Observation",10000)))
 
 ```
 
@@ -296,13 +287,27 @@ quan.df.app <- data.frame(x=rep(quan.app.true,3),median=c(apply(quan.app,2,sort)
 #   ux <- unique(x)
 #   return(ux[which.max(tabulate(match(x, ux)))])
 # }
-simutan<-apply(y.st,1,function(x){sum(x>0)})
-#simutan.norm<-apply(y.norm,1,function(x){sum(x>0)})
+simu.mean <- apply(apply(app.sim,c(1,3),function(x){sum(x>0)}),1,mean)
+simu.sd <- apply(apply(app.sim,c(1,3),function(x){sum(x>0)}),1,sd)
+simu.CI.upper <- simu.mean + 1.96*simu.sd
+simu.CI.lower <- simu.mean - 1.96*simu.sd
+simu.norm.mean<-apply(apply(app.sim.norm,c(1,3),function(x){sum(x>0)}),1,mean)
+simu.norm.sd<-apply(apply(app.sim.norm,c(1,3),function(x){sum(x>0)}),1,sd)
+simu.norm.CI.upper <- simu.norm.mean + 1.96*simu.norm.sd
+simu.norm.CI.lower <- simu.norm.mean - 1.96*simu.norm.sd
+
 simutan.true<-apply(raindata,1,function(x){sum(x>0)})
 
 
 
-spat.dep <- melt(data.frame(Truth=simutan.true,"Skew-t" = simutan))
+spat.dep.true <- data.frame(mean = simutan.true,CI.upper = NA, CI.lower = NA,type= "Observation")
+spat.dep.skew <- data.frame(mean = simu.mean,CI.upper = simu.CI.upper, CI.lower = simu.CI.lower,type= "Skew-t Simulation")
+spat.dep.norm <- data.frame(mean = simu.norm.mean,CI.upper = simu.norm.CI.upper, CI.lower = simu.norm.CI.lower, type= "Gaussian Simulation")
+spat.dep <- rbind(spat.dep.true,spat.dep.skew,spat.dep.norm)
+
+freq_cut <- function(x){
+    table(cut(x, breaks=c(-.5,0.5,1.5,2.5,3.5,4.5,5.5,6.5,7.5,8.5)))
+}
 ```
 
 ##Dry spell length
@@ -327,6 +332,39 @@ quan.cons <- data.frame(x = rep(quan.cons.true,2),
                         Type=c(rep("Skew-t",10000),rep("Truth",10000)))
 
 ```
+
+```{r}
+plot_multi_histogram <- function(df, feature, label_column) {
+    plt <- ggplot(df, aes(x=eval(parse(text=feature)), fill=eval(parse(text=label_column)))) +
+    geom_histogram(alpha=0.4, position="identity", aes(y = ..density..),bins=20) +
+    labs(x=feature, y = "Density") + scale_x_log10()
+    plt + guides(fill=guide_legend(title=label_column))
+}
+```
+
+```{r}
+dry.length<-c()
+for (j in 1 :niters){
+    dry.length = c(dry.length,cons2[[j]]$length[cons2[[j]]$values==0])
+}
+dry.length.norm<-c()
+for (j in 1 :niters){
+    dry.length.norm = c(dry.length,cons2.norm[[j]]$length[cons2.norm[[j]]$values==0])
+}
+
+dry.length.true = cons$length[cons$values==0]
+
+a=data.frame(DryLength = (dry.length), Type = "skew-t")
+b=data.frame(DryLength = (dry.length.norm), Type = "Normal")
+c=data.frame(DryLength = (dry.length.true), Type = "Observation")
+abc <- rbind(a,b,c)
+plot_multi_histogram(abc,"DryLength","Type")
+
+#abc_boxplot <- ggplot(abc, aes(y=DryLength,group=Type) ) +
+#    geom_boxplot(alpha=0.8)+scale_y_log10()
+#abc_boxplot
+```
+
 
 ##Wet spell length
 
@@ -360,6 +398,7 @@ w.quan.cons <- data.frame(x=rep(w.quan.cons.true,2),
 condi.prob <- condi.prob.norm<-matrix(0,3,50)
 for(i in 1:50){
 condi.prob[,i] <- table((app.sim[-1,,i]>0) - (app.sim[-NT,,i]>0))/(NT*NS)
+condi.prob.norm[,i] <- table((app.sim.norm[-1,,i]>0) - (app.sim.norm[-NT,,i]>0))/(NT*NS)
 }
 condi.prob.real <- table((raindata[-1,]>0)-(raindata[-NT,]>0))/(NT*NS)
 
@@ -367,11 +406,26 @@ wcd <- apply(condi.prob,1,mean)[3]
 dcd <- 1-apply(condi.prob,1,mean)[3]
 wcw <- 1-apply(condi.prob,1,mean)[1]
 dcw <- apply(condi.prob,1,mean)[1]
+wcd.sd <- apply(condi.prob,1,sd)[3]
+dcd.sd <- apply(condi.prob,1,sd)[3]
+wcw.sd <- apply(condi.prob,1,sd)[1]
+dcw.sd <- apply(condi.prob,1,sd)[1]
 round(c(wcw,dcw,wcd,dcd),3)
-wcd.r <- apply(condi.prob.real,1,mean)[3]
-dcd.r <- 1-apply(condi.prob.real,1,mean)[3]
-wcw.r <- 1-apply(condi.prob.real,1,mean)[1]
-dcw.r <- apply(condi.prob.real,1,mean)[1]
+round(c(wcw.sd,dcw.sd,wcd.sd,dcd.sd),6)
+wcd.n <- apply(condi.prob.norm,1,mean)[3]
+dcd.n <- 1-apply(condi.prob.norm,1,mean)[3]
+wcw.n <- 1-apply(condi.prob.norm,1,mean)[1]
+dcw.n <- apply(condi.prob.norm,1,mean)[1]
+wcd.sd.n <- apply(condi.prob.norm,1,sd)[3]
+dcd.sd.n <- apply(condi.prob.norm,1,sd)[3]
+wcw.sd.n <- apply(condi.prob.norm,1,sd)[1]
+dcw.sd.n <- apply(condi.prob.norm,1,sd)[1]
+round(c(wcw.n,dcw.n,wcd.n,dcd.n),3)
+round(c(wcw.sd.n,dcw.sd.n,wcd.sd.n,dcd.sd.n),6)
+wcd.r <- condi.prob.real[3]
+dcd.r <- 1-condi.prob.real[3]
+wcw.r <- 1-condi.prob.real[1]
+dcw.r <- condi.prob.real[1]
 round(c(wcw.r,dcw.r,wcd.r,dcd.r),3)
 ```
 
@@ -381,21 +435,24 @@ round(c(wcw.r,dcw.r,wcd.r,dcd.r),3)
 ```{r}
 p1 <- ggplot(data = quan.df.app, aes(x=x, y=median, colour=Type)) + 
     geom_line(size=0.8) + ylab("Empirical Quantiles (count/epoch)") + xlab("Sample Quantiles (count/epoch)") +
-    ggtitle("QQ Plot of the Observation and Simulation Models") +
     scale_y_continuous()+scale_x_continuous()+
     geom_ribbon(aes(ymin=lower, ymax=upper,fill=Type), linetype=2, alpha=0.3) + 
     scale_color_brewer(palette = "Dark2") +    
-    scale_fill_brewer(palette = "Dark2")
+    scale_fill_brewer(palette = "Dark2") + guides(colour=guide_legend(title="Data Type"),fill=guide_legend(title="Data Type"))
+p1
 ```
 
 ##Simutaneous rain
 ```{r}
 
-p2 <- ggplot(spat.dep,aes(group=variable,fill=variable)) +
-        geom_histogram(aes(value),binwidth=.5,position = position_dodge())+ 
-        xlab("Number of simutaneously rainy locations")+
-        ylab("Count")+
-        ggtitle("Histogram of Simultaneous Rain")
+p2 <- ggplot(spat.dep,aes(x = mean, fill=type)) +
+        geom_histogram(alpha=0.8, position="dodge2", aes(y = ..density..),bins=9) +
+        scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8)) + scale_y_sqrt()+
+        xlab("Number of simutaneously rainy locations") +
+        ylab("Frequency") + guides(fill=guide_legend(title="Data Type"))
+
+p2
+
 
 ```
 
@@ -408,8 +465,10 @@ p.cons <- ggplot(data = quan.cons, aes(x=x, y=median, colour=Type)) +
     geom_ribbon(aes(ymin=lower, ymax=upper,fill=Type), linetype=2, alpha=0.3) + 
     scale_color_brewer(palette = "Dark2") +    
     scale_fill_brewer(palette = "Dark2")
-
+p.cons
 ```
+
+
 
 ```{r}
 w.p.cons <- ggplot(data = w.quan.cons, aes(x=x, y=median, colour=Type)) + 
@@ -467,11 +526,11 @@ ggsave(filename=here("results","sim_compare.pdf"),device='pdf', plot=combine_plo
 ```
 
 ```{r}
-ggsave(filename=here("results","qqapp.pdf"),device='pdf', plot=p1, width = 6, height = 5)
+ggsave(filename=here("results","qqapp.pdf"),device='pdf', plot=p1, width = 8, height = 5)
 ```
 
 ```{r}
-ggsave(filename=here("results","spatial.pdf"),device='pdf', plot=p2,width = 6, height = 5)
+ggsave(filename=here("results","spatial.pdf"),device='pdf', plot=p2,width = 8, height = 5)
 ```
 
 ```{r}
