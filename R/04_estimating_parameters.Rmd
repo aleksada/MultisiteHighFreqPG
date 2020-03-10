@@ -241,13 +241,12 @@ init[3] <- .5
 init[4] <- .5
 init[5] <- 1 #positive skewness alpha
 init <- log(init)
-#cov.optim.rslt.st <- optim(par=init,fn = varlik.sp.var1.st,
-#                    data = raindata, coord = coord, ut = ut, nu = 4, 
-#                    hessian = TRUE)
+cov.optim.rslt.st <- optim(par=init,fn = varlik.sp.var1.st,
+                    data = raindata, coord = coord, ut = ut,
+                    nu = 4,hessian = TRUE)
 #cov.optim.rslt.st.1 <- bobyqa(x0=init,fn = varlik.sp.var1.st,
 #                    data = raindata, coord = coord, ut = ut, nu = 4)
-cov.optim.rslt.st.1 <- neldermead(x0=init,fn = varlik.sp.var1.st,
-                    data = raindata, coord = coord, ut = ut, nu = 4)
+cov.optim.rslt.st.1 <- neldermead(x0=init,fn = varlik.sp.var1.st, data = raindata, coord = coord, ut = ut, nu = 4)
 #cov.optim.rslt.st.1 <- lbfgs(x0=init,fn = varlik.sp.var1.st,
 #                    data = raindata, coord = coord, ut = ut, nu = 4)
 ```
@@ -264,9 +263,7 @@ init[2] <- 1 #spatial range
 init[3] <- 0.5
 init[4] <- 0.5
 init<-log(init)
-cov.optim.rslt.norm <- optim(par = init,fn = varlik.sp.var1.norm,
-                    data = raindata, coord = coord, ut = ut, 
-                    hessian = TRUE)
+cov.optim.rslt.norm <- optim(par = init,fn = varlik.sp.var1.norm, data = raindata, coord = coord, ut = ut, hessian = TRUE)
 
 ```
 
@@ -282,9 +279,8 @@ cov.beta1 <- exp(cov.optim.rslt$par[2])
 cov.b0 <- exp(cov.optim.rslt$par[3])
 cov.b1 <- exp(cov.optim.rslt$par[4])
 cov.alpha <- exp(cov.optim.rslt$par[5])
-cov.optim.rslt <- cov.optim.rslt.st
-cov.fisher_info <- solve(cov.optim.rslt$hessian)
-cov.prop_sigma <- sqrt(diag(cov.fisher_info))
+cov.fisher_info <- solve(cov.optim.rslt.st$hessian)
+cov.prop_sigma <- sqrt(abs(diag(cov.fisher_info)))
 cov.upper <- cov.optim.rslt$par + 1.96 * cov.prop_sigma
 cov.lower <- cov.optim.rslt$par - 1.96 * cov.prop_sigma
 cov.interval <- data.frame(value = cov.optim.rslt$par, lower = cov.lower, upper = cov.upper)
