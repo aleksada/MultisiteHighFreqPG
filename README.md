@@ -27,7 +27,6 @@ The following figure shows the performance comparison between our proposed model
 * dplyr
 * sn
 * geoR
-* cowplot
 
 Please run "install_packages.R" file first to make sure the required R packages are installed.
 
