@@ -52,6 +52,3 @@ One can also run the scripts one by one by following the steps below. All of the
 ### Author
 - Yuxiao Li and Ying Sun
 
-### Poster
-
-![QQplot](imgs/poster.jpg)
