@@ -21,7 +21,7 @@ This file contains the code for inference and reproducing rainfall data. Most of
 
 In general, we want to
 
-* load the results from estimation
+* load the results from estimation procedure
 * simulate one replicate of rainfall base on skew-t model and Gaussian model
 * visualize the simulations
 * simulate multiple replicates of rainfall base on skew-t model and Gaussian model

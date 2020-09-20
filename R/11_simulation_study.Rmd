@@ -19,7 +19,7 @@ This file contains the code for simulation studies.
 
 In general, we want to
 
-* validate our model
+* examine the performance our model
 * compare with a similar model with Gaussian error
 * calculate the some important quantities related to rainfall
 * visualize the results

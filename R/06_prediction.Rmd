@@ -22,7 +22,7 @@ In general, we want to
 * transfer the dataset to python to run the LSTM model
 * load the predicted value from LSTM model
 * calculate the predicted value from our model
-* compare the MSE and other important properties.
+* compare the errors and other important properties.
 
 # Librares and Data
 
